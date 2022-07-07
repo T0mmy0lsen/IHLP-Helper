@@ -1,27 +1,75 @@
 # This is a fun Python script.
+
 import json
 import re
+import os
+import hashlib
+
+import numpy as np
+
+import config as cf
 
 from model.preprocess import Preprocess
+from model.prepare import Prepare
+from model.train import Train
+from model.wordembedding import WordEmbedding, WordEmbeddingLoader
 
 
-class Config:
+class Shared:
 
-    replace_match: {}
-    replace_match_regex: {}
-    remove_after: []
-    remove_special_chars: None
+    vectorizer = None
+    layer = None
+    exists = None
+    hashed = None
+
+    model = None
+    nrows = None
+    replace_match_regex = None
+    word_embedding_dim = None
+    word_embedding_epochs = None
+    remove_special_chars = None
+
+    folder = f'{cf.BASE_PATH}/model/output/preprocessed'
+
+    dfs_names = ['communication', 'request']
+    dfs_index = [
+        ['subject', 'message'],
+        ['subject', 'solution', 'description']
+    ]
+    dfs_names_train = 'request'
+    dfs_index_train = ['subject', 'description']
 
     def __init__(self,
-                 replace_match,
+                 model,
+                 nrows,
                  replace_match_regex,
-                 remove_after,
+                 word_embedding_epochs,
+                 word_embedding_dim,
                  remove_special_chars=True):
-        self.replace_match = replace_match
+        self.model = model
+        self.nrows = nrows
         self.replace_match_regex = replace_match_regex
-        self.remove_after = remove_after
         self.remove_special_chars = remove_special_chars
+        self.word_embedding_dim = word_embedding_dim
+        self.word_embedding_epochs = word_embedding_epochs
 
+        # Hash the config and check if there is a folder with the same config
+        self.set_hash()
+
+    def set_vectorizer(self, vectorizer):
+        self.vectorizer = vectorizer
+
+    def set_word_embedding_layer(self, layer):
+        self.layer = layer
+
+    def set_exists(self, exists):
+        self.exists = exists
+
+    def set_hash(self):
+        obj_str = f'{self.get_json()}'
+        hashed = hashlib.md5(obj_str.encode()).hexdigest()
+        self.hashed = f'{hashed}'.upper()[0:8]
+        self.exists = os.path.isdir(f'{self.folder}/{self.hashed}')
 
     def get_json(self):
 
@@ -33,28 +81,41 @@ class Config:
             return tmp
 
         return json.dumps({
-            'remove_after': self.remove_after,
+            'nrows': self.nrows,
             'remove_special_chars': self.remove_special_chars,
-            'replace_match': self.replace_match,
-            'replace_match_regex': extract_regex(self.replace_match_regex)
+            'replace_match_regex': extract_regex(self.replace_match_regex),
+            'word_embedding_dim': self.word_embedding_dim,
+            'word_embedding_epochs': self.word_embedding_epochs
         })
 
 
-def preprocess():
+def run():
 
-    Preprocess(Config(
-        replace_match={
-            '\n': ' ',
-            '\t': ' ',
-            'email': 'mail',
-            'e-mail': 'mail',
-        },
+    shared = Shared(
+        model=1,
+        word_embedding_dim=128,
+        word_embedding_epochs=50,
+        nrows=None,
         replace_match_regex={
             '': [
-                re.compile(r'gmt\+\d{2}:00')
+                re.compile(r'gmt\+\d{2}:00', flags=re.MULTILINE),
+                re.compile(r'med venlig hilsen(.|\n)*', flags=re.MULTILINE),
+            ],
+            '.': [
+                re.compile(r'[?!]', flags=re.MULTILINE),
+            ],
+            ' ': [
+                re.compile(r'\t|\n|>|<|\.\s+', flags=re.MULTILINE)
+            ],
+            'mail': [
+                re.compile(r'email|e-mail', flags=re.MULTILINE)
+            ],
+            '<identifier>': [
+                re.compile(r'[a-z]+-\d+'),
+                re.compile(r'\d+-[a-z]+'),
             ],
             '<link>': [
-                re.compile(r'http?:\/\/.*[\r\n]*', flags=re.MULTILINE)
+                re.compile(r'http?[^\s]+', flags=re.MULTILINE)
             ],
             '<email>': [
                 re.compile(r'\S*@\S*\s?', flags=re.MULTILINE)
@@ -63,28 +124,32 @@ def preprocess():
                 re.compile(r'(\d{2}|\d{4})(-|\.|\/)(\d{2})(-|\.|\/)(\d{2}|\d{4}) \d{2}:\d{2}', flags=re.MULTILINE)
             ],
             '<date>': [
-                re.compile(r'(\d|\d{2})(-|\.|\/)(\d|\d{2})(\.|-)(\d{4}|\d{2})', flags=re.MULTILINE)
+                re.compile(r'([^\w])(\d|\d{2})(-|\.|\/)(\d|\d{2})(-|\.|\/)(\d{4}|\d{2})([^\w])', flags=re.MULTILINE),
+                re.compile(r'([^\w])([0-3][0-9])(-|\.|/)([0-1][0-9])([^\w])', flags=re.MULTILINE),
             ],
             '<time>': [
-                re.compile(r'(kl|kl\.) \d{2}\.\d{2}', flags=re.MULTILINE),
-                re.compile(r'\d{2}:\d{2}', flags=re.MULTILINE),
+                re.compile(r'(kl|kl\.) \d{2}\.\d{2}\s', flags=re.MULTILINE),
+                re.compile(r'\s\d{2}:\d{2}\s', flags=re.MULTILINE),
             ],
             '<phone>': [
-                re.compile(r'(\+\d{2})? ?\d{2} ?\d{2} ?\d{2} ?\d{2}', flags=re.MULTILINE)
+                re.compile(r'\s(\+\d{2})? ?\d{2} ?\d{2} ?\d{2} ?\d{2}\s', flags=re.MULTILINE)
+            ],
+            '<measure>': [
+                re.compile(r'([^\w])\d+(\.|-|\d)+\d+([^\w])', flags=re.MULTILINE)
             ],
             '<number>': [
-                re.compile(r'\s\d+\s', flags=re.MULTILINE)
+                re.compile(r'([^\w])\d+([^\w])', flags=re.MULTILINE)
             ]
-        },
-        remove_after=[
-            'med venlig hilsen'
-        ],
-        remove_special_chars=True
-    ))
+        }
+    )
+
+    Preprocess(shared)
+    x_train, y_train, x_validate, y_validate, categories = Prepare(shared).fetch(amount=86000)
+    WordEmbedding(shared)
+    WordEmbeddingLoader(shared, x_train=np.concatenate((x_train, x_validate)))
+    Train(shared, x_train, y_train, x_validate, y_validate, categories)
 
 
-def run():
-    preprocess()
 
 
 # Press the green button in the gutter to run the script.

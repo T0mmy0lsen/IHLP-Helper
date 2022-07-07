@@ -1,6 +1,4 @@
 import csv
-import hashlib
-import json
 import os
 import shutil
 import warnings
@@ -12,73 +10,58 @@ import re
 from tqdm import tqdm
 from bs4 import BeautifulSoup
 
-folder = f'{cf.BASE_PATH}/model/output/preprocessed'
 warnings.filterwarnings("ignore", category=UserWarning, module='bs4')
 tqdm.pandas()
 
 
 class Preprocess:
 
-    def __init__(self, config, env='dev'):
+    def __init__(self, shared, env='staging'):
 
-        self.config = config
-        # Hash the config and check if there is a folder with the same config
-        self.hashed, exists = self.get_hash()
+        self.shared = shared
 
-        if env == 'dev' and exists:
-            shutil.rmtree(f'{folder}/{self.hashed}')
-            exists = False
+        if env == 'dev' and self.shared.exists:
+            shutil.rmtree(f'{self.shared.folder}/{self.shared.hashed}')
+            self.shared.set_exists(False)
 
-        if not exists:
-            # Load in the original files
-            self.df_communication = pd.read_csv(cf.PATH_INPUT_COMMUNICATION, nrows=1000)
-            self.df_request_original = pd.read_csv(cf.PATH_INPUT_REQUEST, nrows=1000)
-            self.df_request = pd.read_csv(cf.PATH_INPUT_REQUEST, nrows=1000)
-            # Avoid problems with NaN-values
-            self.df_communication = self.df_communication.fillna('')
-            self.df_request = self.df_request.fillna('')
-            # First array is the data, second array shows which indexes should be preprocessed.
-            self.run(
-                [self.df_communication, self.df_request],
-                [['subject', 'message'], ['subject', 'description', 'solution']]
-            )
+        if not self.shared.exists:
+            self.dfs = [
+                pd.read_csv(cf.PATH_INPUT_COMMUNICATION, nrows=self.shared.nrows),
+                pd.read_csv(cf.PATH_INPUT_REQUEST, nrows=self.shared.nrows)
+            ]
+            for idx, df in enumerate(self.dfs):
+                self.dfs[idx] = df.fillna('')
+            self.run()
         else:
             print(f'There is already a preprocessing-folder for that configuration')
-            print(f'Remove the folder {folder}/{self.hashed} to rebuild it')
+            print(f'Remove the folder {self.shared.folder}/{self.shared.hashed} to rebuild it')
 
-    def run(self, dfs, idxs):
 
-        for i, df in enumerate(dfs):
-            for idx in idxs[i]:
+    def run(self):
+
+        for i, df in enumerate(self.dfs):
+            for idx in self.shared.dfs_index[i]:
                 self.remove_html_tags(df, idx)              # Remove HTML-tags, weird characters and lowercases text
-                self.replace_match(df, idx)                 # Configurable
                 self.replace_match_regex(df, idx)           # Configurable
-                self.remove_everything_after(df, idx)       # Configurable
-                if self.config.remove_special_chars:
+
+                if self.shared.remove_special_chars:
                     self.remove_special_chars(df, idx)      # Remove special chars
                 self.remove_extra_spaces(df, idx)           # Remove extra spacing
 
         # Make a folder for the preprocessed files
-        os.makedirs(f'{folder}/{self.hashed}')
+        os.makedirs(f'{self.shared.folder}/{self.shared.hashed}')
 
         # Output the files
-        self.df_communication.to_csv(f'{folder}/{self.hashed}/communication.csv', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
-        self.df_request.to_csv(f'{folder}/{self.hashed}/request.csv', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
-
-        # Output the description-field from request for inspection
-        self.df_request.to_csv(f'{folder}/{self.hashed}/request_description.csv', quotechar='"', quoting=csv.QUOTE_NONNUMERIC, columns=['description'])
+        for idx, df_name in enumerate(self.shared.dfs_names):
+            self.dfs[idx].to_csv(f'{self.shared.folder}/{self.shared.hashed}/{df_name}.csv', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
+            for index in self.shared.dfs_index[idx]:
+                self.dfs[idx].to_csv(f'{self.shared.folder}/{self.shared.hashed}/{df_name}_{index}.csv', quotechar='"', quoting=csv.QUOTE_NONNUMERIC, columns=[index], index=False)
 
         # Saved the config as JSON
-        f = open(f'{folder}/{self.hashed}/config.json', 'a')
-        f.write(self.config.get_json())
+        f = open(f'{self.shared.folder}/{self.shared.hashed}/config.json', 'a')
+        f.write(self.shared.get_json())
         f.close()
 
-    def get_hash(self):
-        obj_str = f'{self.config.get_json()}'
-        hashed = hashlib.md5(obj_str.encode()).hexdigest()
-        hashed = f'{hashed}'.upper()[0:8]
-        exists = os.path.isdir(f'{folder}/{hashed}')
-        return hashed, exists
 
     @staticmethod
     def remove_html_tags(df, index):
@@ -92,36 +75,12 @@ class Preprocess:
         df[index] = df.progress_apply(lambda x: get_remove_html_tags(x[index]), axis=1)
         return df
 
-    def remove_everything_after(self, df, index):
-
-        # Removes everything after a specific match.
-        # This is mainly for removing mail-signatures.
-        def get_remove_everything_after(text):
-            for e in self.config.remove_after:
-                text = re.sub(f'({e}).*', ' ', text)
-            return text
-
-        df[index] = df.progress_apply(lambda x: get_remove_everything_after(x[index]), axis=1)
-
-    def replace_match(self, df, index):
-
-        def get_replace_match(line):
-            text = line
-            values = list(self.config.replace_match.values())
-            for i, e in enumerate(list(self.config.replace_match.keys())):
-                value = values[i]
-                text = text.replace(f'{e}', f'{value}')
-            return text
-
-        df[index] = df.progress_apply(lambda x: get_replace_match(x[index]), axis=1)
-        return df
-
     def replace_match_regex(self, df, index):
 
         def get_replace_match(line):
             text = line
-            values = list(self.config.replace_match_regex.values())
-            for i, e in enumerate(list(self.config.replace_match_regex.keys())):
+            values = list(self.shared.replace_match_regex.values())
+            for i, e in enumerate(list(self.shared.replace_match_regex.keys())):
                 regexes = values[i]
                 for regex in regexes:
                     text = re.sub(regex, f' {e} ', text)
@@ -145,8 +104,8 @@ class Preprocess:
     @staticmethod
     def remove_extra_spaces(df, index):
 
-        def get_remove_extra_spaces(line):
-            text = re.sub('\s\s+', ' ', line)
+        def get_remove_extra_spaces(text):
+            text = re.sub('\s\s+', ' ', text)
             text = text.strip()
             return text
 
