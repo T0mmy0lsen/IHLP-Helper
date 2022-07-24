@@ -2,8 +2,14 @@ import csv
 import os
 import shutil
 import warnings
+from time import sleep
 
+import lemmy as lemmy
 import pandas as pd
+from nltk import SnowballStemmer
+
+from danlp.models import load_spacy_model
+
 import config as cf
 import re
 
@@ -18,6 +24,7 @@ class Preprocess:
 
     def __init__(self, shared, env='staging'):
 
+        print("[Preprocess] Start")
         self.shared = shared
 
         if env == 'dev' and self.shared.exists:
@@ -33,20 +40,36 @@ class Preprocess:
                 self.dfs[idx] = df.fillna('')
             self.run()
         else:
-            print(f'There is already a preprocessing-folder for that configuration')
-            print(f'Remove the folder {self.shared.folder}/{self.shared.hashed} to rebuild it')
+            print(f'\tThere is already a preprocessing-folder for that configuration')
+            print(f'\tRemove the folder {self.shared.folder}/{self.shared.hashed} to rebuild it')
+
+        print("[Preprocess] End")
+        print("")
 
 
     def run(self):
 
         for i, df in enumerate(self.dfs):
             for idx in self.shared.dfs_index[i]:
-                self.remove_html_tags(df, idx)              # Remove HTML-tags, weird characters and lowercases text
-                self.replace_match_regex(df, idx)           # Configurable
+
+                self.remove_html_tags(df, idx)
+
+                if self.shared.lemmatize:
+                    self.lemmatize(df, idx)
+
+                if self.shared.stemming:
+                    self.stemming(df, idx)
+
+                if self.shared.stopwords is not None:
+                    self.remove_stopwords(df, idx, self.shared)
+
+                if self.shared.replace_match_regex is not None:
+                    self.replace_match_regex(df, idx, self.shared)
 
                 if self.shared.remove_special_chars:
-                    self.remove_special_chars(df, idx)      # Remove special chars
-                self.remove_extra_spaces(df, idx)           # Remove extra spacing
+                    self.remove_special_chars(df, idx)
+
+                self.remove_extra_spaces(df, idx)
 
         # Make a folder for the preprocessed files
         os.makedirs(f'{self.shared.folder}/{self.shared.hashed}')
@@ -62,51 +85,114 @@ class Preprocess:
         f.write(self.shared.get_json())
         f.close()
 
+    @staticmethod
+    def get_lemmatize(line, nlp, lemmatizer):
+        doc = nlp(line)
+        texts = []
+        skip = False
+        for idx, tok in enumerate(doc):
+            text = tok.lower_
+            # We keep the tokens between <>
+            if tok.lower_ == '<':
+                skip = True
+            elif tok.lower_ == '>':
+                skip = False
+                text = "".join([e.text for e in doc[idx - 2: idx + 1]])
+            # Some tokens we keep
+            elif tok.lower_ in ['jer', 'mange']:
+                text = tok.lower_
+            # Some tokens we alter
+            elif tok.lower_[-3:] == 'rne':
+                text = tok.lower_[:-1]
+            # Some tokens we remove
+            elif tok.lower_ in [',']:
+                continue
+            else:
+                text = lemmatizer.lemmatize(tok.tag_, tok.lower_)[0]
+            if not skip:
+                texts.append(text)
+        return " ".join(texts)
+
+    @staticmethod
+    def lemmatize(df, index):
+        sleep(.2)
+        print('\tLemmatize')
+        lemmatizer = lemmy.load('da')
+        nlp = load_spacy_model()
+        df[index] = df.progress_apply(lambda x: Preprocess.get_lemmatize(x[index], nlp, lemmatizer), axis=1)
+
+    @staticmethod
+    def get_stemmer(line, stemmer):
+        text = " ".join([stemmer.stem(e) for e in line.split(" ")])
+        return text
+
+    @staticmethod
+    def stemming(df, index):
+        sleep(.2)
+        print('\tStemming')
+        stemmer = SnowballStemmer('danish')
+        df[index] = df.progress_apply(lambda x: Preprocess.get_stemmer(x[index], stemmer), axis=1)
+
+    @staticmethod
+    def get_remove_html_tags(line):
+        text = BeautifulSoup(line, "lxml").text
+        text = text.replace(u'\u00A0', ' ')
+        return text
 
     @staticmethod
     def remove_html_tags(df, index):
-
-        def get_remove_html_tags(line):
-            text = BeautifulSoup(line, "lxml").text
-            text = text.replace(u'\u00A0', ' ')
-            text = text.lower()
-            return text
-
-        df[index] = df.progress_apply(lambda x: get_remove_html_tags(x[index]), axis=1)
+        sleep(.2)
+        print('\tRemoving HTML tags')
+        df[index] = df.progress_apply(lambda x: Preprocess.get_remove_html_tags(x[index]), axis=1)
         return df
 
-    def replace_match_regex(self, df, index):
+    @staticmethod
+    def get_replace_match(line, regex_dict):
+        text = line
+        values = list(regex_dict.values())
+        for i, e in enumerate(list(regex_dict.keys())):
+            regexes = values[i]
+            for regex in regexes:
+                text = re.sub(regex, f' {e} ', text)
+        return text
 
-        def get_replace_match(line):
-            text = line
-            values = list(self.shared.replace_match_regex.values())
-            for i, e in enumerate(list(self.shared.replace_match_regex.keys())):
-                regexes = values[i]
-                for regex in regexes:
-                    text = re.sub(regex, f' {e} ', text)
-            return text
+    @staticmethod
+    def replace_match_regex(df, index, shared):
+        sleep(.2)
+        print('\tReplace by regex')
+        df[index] = df.progress_apply(lambda x: Preprocess.get_replace_match(x[index], shared.replace_match_regex), axis=1)
 
-        df[index] = df.progress_apply(lambda x: get_replace_match(x[index]), axis=1)
-        return df
+    @staticmethod
+    def get_remove_stopwords(line, stopwords):
+        text = " ".join([e for e in line.split(" ") if e not in stopwords])
+        return text
+
+    @staticmethod
+    def remove_stopwords(df, index, shared):
+        sleep(.2)
+        print('\tRemoving stopwords')
+        df[index] = df.progress_apply(lambda x: Preprocess.get_remove_stopwords(x[index], shared.stopwords), axis=1)
+
+    @staticmethod
+    def get_remove_special_chars(text):
+        text = re.sub('[^\w\s.<>]', ' ', text)
+        text = re.sub('_', ' ', text)
+        return text
 
     @staticmethod
     def remove_special_chars(df, index):
+        sleep(.2)
+        print('\tRemoving special charaters')
+        df[index] = df.progress_apply(lambda x: Preprocess.get_remove_special_chars(x[index]), axis=1)
 
-        # This removes special chars. Note that this is run second-to-last,
-        # s.t. any meaning from special characters can be extracted before this is run.
-        def get_remove_special_chars(text):
-            text = re.sub('[^\w\s.<>]', ' ', text)
-            text = re.sub('_', ' ', text)
-            return text
-
-        df[index] = df.progress_apply(lambda x: get_remove_special_chars(x[index]), axis=1)
+    @staticmethod
+    def get_remove_extra_spaces(text):
+        text = re.sub('\s\s+', ' ', text)
+        text = text.strip()
+        return text
 
     @staticmethod
     def remove_extra_spaces(df, index):
-
-        def get_remove_extra_spaces(text):
-            text = re.sub('\s\s+', ' ', text)
-            text = text.strip()
-            return text
-
-        df[index] = df.progress_apply(lambda x: get_remove_extra_spaces(x[index]), axis=1)
+        sleep(.2)
+        print('\tRemoving spacing')
+        df[index] = df.progress_apply(lambda x: Preprocess.get_remove_extra_spaces(x[index]), axis=1)

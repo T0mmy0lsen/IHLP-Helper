@@ -6,148 +6,105 @@ import os
 import hashlib
 
 import numpy as np
+from nltk import FreqDist
 
 import config as cf
+from model.model_keywords import ModelKeywords
+from model.model_svm import ModelSVM
 
 from model.preprocess import Preprocess
 from model.prepare import Prepare
-from model.train import Train
-from model.wordembedding import WordEmbedding, WordEmbeddingLoader
+# from model.train import Train
+# from model.wordembedding import WordEmbedding, WordEmbeddingLoader
 
-
-class Shared:
-
-    vectorizer = None
-    layer = None
-    exists = None
-    hashed = None
-
-    model = None
-    nrows = None
-    replace_match_regex = None
-    word_embedding_dim = None
-    word_embedding_epochs = None
-    remove_special_chars = None
-
-    folder = f'{cf.BASE_PATH}/model/output/preprocessed'
-
-    dfs_names = ['communication', 'request']
-    dfs_index = [
-        ['subject', 'message'],
-        ['subject', 'solution', 'description']
-    ]
-    dfs_names_train = 'request'
-    dfs_index_train = ['subject', 'description']
-
-    def __init__(self,
-                 model,
-                 nrows,
-                 replace_match_regex,
-                 word_embedding_epochs,
-                 word_embedding_dim,
-                 remove_special_chars=True):
-        self.model = model
-        self.nrows = nrows
-        self.replace_match_regex = replace_match_regex
-        self.remove_special_chars = remove_special_chars
-        self.word_embedding_dim = word_embedding_dim
-        self.word_embedding_epochs = word_embedding_epochs
-
-        # Hash the config and check if there is a folder with the same config
-        self.set_hash()
-
-    def set_vectorizer(self, vectorizer):
-        self.vectorizer = vectorizer
-
-    def set_word_embedding_layer(self, layer):
-        self.layer = layer
-
-    def set_exists(self, exists):
-        self.exists = exists
-
-    def set_hash(self):
-        obj_str = f'{self.get_json()}'
-        hashed = hashlib.md5(obj_str.encode()).hexdigest()
-        self.hashed = f'{hashed}'.upper()[0:8]
-        self.exists = os.path.isdir(f'{self.folder}/{self.hashed}')
-
-    def get_json(self):
-
-        def extract_regex(x):
-            tmp = []
-            for arrays in x.values():
-                for e in arrays:
-                    tmp.append(e.pattern)
-            return tmp
-
-        return json.dumps({
-            'nrows': self.nrows,
-            'remove_special_chars': self.remove_special_chars,
-            'replace_match_regex': extract_regex(self.replace_match_regex),
-            'word_embedding_dim': self.word_embedding_dim,
-            'word_embedding_epochs': self.word_embedding_epochs
-        })
+from model.model_trivial import ModelTrivial
+from model.shared import SharedDict
 
 
 def run():
 
-    shared = Shared(
-        model=1,
-        word_embedding_dim=128,
-        word_embedding_epochs=50,
-        nrows=None,
-        replace_match_regex={
-            '': [
-                re.compile(r'gmt\+\d{2}:00', flags=re.MULTILINE),
-                re.compile(r'med venlig hilsen(.|\n)*', flags=re.MULTILINE),
-            ],
-            '.': [
-                re.compile(r'[?!]', flags=re.MULTILINE),
-            ],
-            ' ': [
-                re.compile(r'\t|\n|>|<|\.\s+', flags=re.MULTILINE)
-            ],
-            'mail': [
-                re.compile(r'email|e-mail', flags=re.MULTILINE)
-            ],
-            '<identifier>': [
-                re.compile(r'[a-z]+-\d+'),
-                re.compile(r'\d+-[a-z]+'),
-            ],
-            '<link>': [
-                re.compile(r'http?[^\s]+', flags=re.MULTILINE)
-            ],
-            '<email>': [
-                re.compile(r'\S*@\S*\s?', flags=re.MULTILINE)
-            ],
-            '<datetime>': [
-                re.compile(r'(\d{2}|\d{4})(-|\.|\/)(\d{2})(-|\.|\/)(\d{2}|\d{4}) \d{2}:\d{2}', flags=re.MULTILINE)
-            ],
-            '<date>': [
-                re.compile(r'([^\w])(\d|\d{2})(-|\.|\/)(\d|\d{2})(-|\.|\/)(\d{4}|\d{2})([^\w])', flags=re.MULTILINE),
-                re.compile(r'([^\w])([0-3][0-9])(-|\.|/)([0-1][0-9])([^\w])', flags=re.MULTILINE),
-            ],
-            '<time>': [
-                re.compile(r'(kl|kl\.) \d{2}\.\d{2}\s', flags=re.MULTILINE),
-                re.compile(r'\s\d{2}:\d{2}\s', flags=re.MULTILINE),
-            ],
-            '<phone>': [
-                re.compile(r'\s(\+\d{2})? ?\d{2} ?\d{2} ?\d{2} ?\d{2}\s', flags=re.MULTILINE)
-            ],
-            '<measure>': [
-                re.compile(r'([^\w])\d+(\.|-|\d)+\d+([^\w])', flags=re.MULTILINE)
-            ],
-            '<number>': [
-                re.compile(r'([^\w])\d+([^\w])', flags=re.MULTILINE)
-            ]
-        }
-    )
+    shared = SharedDict().default()
 
+    # The job of Preprocess is to process the text s.t. its ready for the model.
     Preprocess(shared)
-    x_train, y_train, x_validate, y_validate, categories = Prepare(shared).fetch(amount=86000)
-    WordEmbedding(shared)
-    WordEmbeddingLoader(shared, x_train=np.concatenate((x_train, x_validate)))
-    Train(shared, x_train, y_train, x_validate, y_validate, categories)
+    # The job of Prepare is to create the text and label columns.
+    # If text or label are derived by some logic - it should be placed here.
+    # Prepare(shared).fetch(amount=86000, categorical_index=False)
+    Prepare(shared).fetch(amount=86000, categorical_index=False, lang=None)
+
+    # data_dict = get_data(shared)
+    # get_stats(data_dict, shared)
+
+    run_trivial(shared)         # 0.24/0.00 (4/1348 categories) # With danish only, stemmer and lemmatizer 0.25
+    run_keywords(shared)        # 0.48/0.28 (4/1348 categories) # With danish only, stemmer and lemmatizer 0.52
+    run_svm(shared)             # 0.67/0.27 (4/5316 categories) # With danish only, stemmer and lemmatizer 0.69
+    # run_cnn(shared)
+
+    # ---------------------------------------------------------------------------------------------------------
+    # Trivial       -   4 categories; with stemmer 0.25, without stemmer 0.26, new labels 0.24
+    # Keyswords     -   4 categories; with stemmer 0.52, without stemmer 0.52, new labels 0.78
+    # SVM           -   4 categories; with stemmer 0.69, without stemmer 0.69, new labels 0.88
+
+    # ---------------------------------------------------------------------------------------------------------
+    # Trivial       -   164 categories; 0.01
+    # Keyswords     -   164 categories; 0.18
+    # SVM           -   164 categories; 0.33
+
+def run_svm(shared):
+    ModelSVM(shared)
+
+
+def run_keywords(shared):
+    ModelKeywords(shared)
+
+
+def run_trivial(shared):
+    ModelTrivial(shared)
+
+
+def run_cnn(shared):
+    # This creates the word embedding.
+    # The word embedding does not rely on Prepare. This means any Preprocess'ed data can be used to train the word embedder.
+    # WordEmbedding(shared)
+    # Load in the created word embedder and create the Word Embedding layer.
+    # WordEmbeddingLoader(shared)
+    # Train the model.
+    # ModelCNN(shared)
+    pass
+
+
+def get_data(shared):
+
+    data_dict = {}
+    for i in shared.categories:
+        data_dict[i] = []
+    for idx, el in enumerate(shared.x_train):
+        data_dict[shared.y_train[idx]].append(el)
+    for idx, el in enumerate(shared.x_validate):
+        data_dict[shared.y_validate[idx]].append(el)
+    return data_dict
+
+
+def get_stats(data_dict, shared, num_words=1000):
+
+    freq_dict = {}
+    freq_dict_list = {}
+    freq_dict_unique = {}
+
+    for k in sorted(data_dict, key=lambda k: len(data_dict[k]), reverse=True):
+        freq_dist = FreqDist(" ".join(data_dict[k]).split(" "))
+        freq_dict[k] = freq_dist.most_common(num_words)
+        freq_dict_list[k] = np.array([e[0] for e in freq_dict[k]])
+
+    for k in freq_dict.keys():
+        not_in = []
+        for k_not_in in freq_dict_list.keys():
+            if k != k_not_in:
+                not_in = np.concatenate((not_in, freq_dict_list[k_not_in]))
+        freq_dict_unique[k] = [e for i, e in enumerate(freq_dict[k]) if freq_dict_list[k][i] not in not_in]
+
+    for idx, k in enumerate(freq_dict.keys()):
+        print(len(data_dict[k]), "\t", shared.categories[idx], freq_dict_unique[k][:5])
 
 
 

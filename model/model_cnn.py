@@ -4,14 +4,14 @@ import tensorflow as tf
 from keras import layers
 
 
-class Train:
+class ModelCNN:
 
-    def __init__(self, shared, x_train, y_train, x_validate, y_validate, categories):
+    def __init__(self, shared):
         if shared.model == 1:
-            self.model_01(shared, x_train, y_train, x_validate, y_validate, categories)
+            self.model_01(shared)
 
 
-    def model_01(self, shared, x_train, y_train, x_validate, y_validate, categories):
+    def model_01(self, shared):
 
         int_sequences_input = tf.keras.Input(shape=(None,), dtype="int64")
         embedded_sequences = shared.layer(int_sequences_input)
@@ -19,15 +19,15 @@ class Train:
         lx = layers.GlobalAveragePooling1D()(lx)
         lx = layers.Dense(128, activation="relu")(lx)
 
-        preds = layers.Dense(len(categories), activation="softmax")(lx)
+        preds = layers.Dense(len(shared.categories), activation="softmax")(lx)
         model = tf.keras.Model(int_sequences_input, preds)
         # model.summary()
 
-        x_train = shared.vectorizer(np.array([[s] for s in x_train])).numpy()
-        x_val = shared.vectorizer(np.array([[s] for s in x_validate])).numpy()
+        x_train = shared.vectorizer(np.array([[s] for s in shared.x_train])).numpy()
+        x_val = shared.vectorizer(np.array([[s] for s in shared.x_validate])).numpy()
 
-        y_train = np.array(y_train)
-        y_val = np.array(y_validate)
+        y_train = np.array(shared.y_train)
+        y_val = np.array(shared.y_validate)
 
         model.compile(
             loss="sparse_categorical_crossentropy", optimizer="rmsprop", metrics=["acc"]
@@ -44,4 +44,4 @@ class Train:
             [["Jeg skal bruge en ny computer"]]
         )
 
-        print(categories[np.argmax(probabilities[0])])
+        print(shared.categories[np.argmax(probabilities[0])])

@@ -2,6 +2,7 @@ import os
 import shutil
 
 import numpy as np
+from langdetect import detect
 
 import config as cf
 import pandas as pd
@@ -10,10 +11,11 @@ import pandas as pd
 class Prepare:
 
     df_relation_history = None
+    df_object_history = None
     df_request = None
     df_item = None
 
-    def __init__(self, shared=None, label_index='assignee'):
+    def __init__(self, shared, label_index='assignee'):
 
         self.shared = shared
         self.label_index = label_index
@@ -26,11 +28,30 @@ class Prepare:
 
     def fetch(self,
               categorical: bool = True,
+              categorical_index: bool = True,
               amount: int = 1000,
               index_label: str = 'label',
               index_text: str = 'text',
               split=.25,
-              seed=123):
+              seed=123,
+              filter=None,
+              lang='da'):
+
+        print("[Prepare] Start")
+
+        if filter is not None:
+            self.df = self.df[self.df[index_label].isin(filter)]
+
+        if lang is not None:
+
+            def detect_lang(x):
+                try:
+                    return detect(x[index_text])
+                except:
+                    return lang
+
+            self.df['lang'] = self.df.progress_apply(lambda x: detect_lang(x), axis=1)
+            self.df = self.df[self.df['lang'] == lang]
 
         categories = []
         if categorical:
@@ -40,7 +61,7 @@ class Prepare:
         arr_x = self.df.head(amount)[index_text].to_numpy()
         arr_y = []
 
-        if categorical:
+        if categorical_index:
             for idx, el in self.df.head(amount).iterrows():
                 i = np.where(categories == el[index_label])
                 arr_y.append(i)
@@ -49,67 +70,96 @@ class Prepare:
 
         arr_y = np.array(arr_y).flatten()
 
-        return self.shuffle_and_split(arr_x, arr_y, split, seed, categories)
+        x_train, y_train, x_validate, y_validate, categories = self.shuffle_and_split(arr_x, arr_y, split, seed, categories)
+
+        self.shared.x_train = x_train
+        self.shared.y_train = y_train
+        self.shared.x_validate = x_validate
+        self.shared.y_validate = y_validate
+        self.shared.categories = categories
+
+        print(f"\t Length of x_train = {len(x_train)}")
+        print(f"\t Length of x_validate = {len(x_validate)}")
+        print(f"\t Length of categories = {len(categories)}")
+        print("[Prepare] End")
+        print("")
 
     def construct_labels(self, label_path):
+
         self.load()
-        df = pd.merge(self.df_request, self.df_relation_history, left_on='requestId', right_on='leftId')
-        df = df[df['rightType'] == 'ItemRole']
-        df = pd.merge(df, self.df_item, left_on='rightId', right_on='itemId')
-        df = df.sort_values(by='tblTimeStamp')
-        df = df[df['username'] != '']
-        df = df.drop_duplicates(subset=['requestId'], keep='last')
-        df = df.rename(columns={'username': 'assignee'})
+
+        df_rh = self.df_relation_history
+        df_oh = self.df_object_history
+        df_it = self.df_item
+
+        df_rh = df_rh.sort_values(by='tblTimeStamp')
+        df_rh = df_rh[df_rh['rightType'] == 'ItemRole']
+        df_oh = df_oh[df_oh['name'].isin([
+            'RequestServiceResponsible',
+            'RequestIncidentResponsible',
+            'RequestServiceReceivedBy',
+            'RequestIncidentReceivedBy',
+        ])]
+        df_it = df_it[df_it['username'] != '']
+
+        df = pd.merge(df_rh, df_oh, left_on='rhTblId', right_on='ohTblId')
+        df = pd.merge(df, df_it, left_on='rightId', right_on='itemId', how='left')
+
+        df = df.drop_duplicates(subset=['leftId'], keep='last')
+
+        df = df.rename(columns={'leftId': 'requestId', 'username': 'assignee'})
         df.to_csv(label_path, index=False, columns=['requestId', 'assignee'])
 
     def construct_text(self, df):
+
         def make_text(x):
             text = []
             for index in self.shared.dfs_index_train:
                 text.append(x[index])
             return " ".join(text)
-        df['text'] = df.progress_apply(lambda x: make_text(x), axis=1)
+        df['text'] = df.apply(lambda x: make_text(x), axis=1)
         return df
 
     def load(self):
 
-        self.df_relation_history = pd.read_csv(f'{cf.BASE_PATH}/data/relation_history.csv', na_values='')
-        self.df_request = pd.read_csv(f'{cf.BASE_PATH}/data/request.csv', na_values='', nrows=self.shared.nrows)
-        self.df_item = pd.read_csv(f'{cf.BASE_PATH}/data/item.csv', na_values='', low_memory=False)
+        self.df_relation_history = pd.read_csv(f'{cf.BASE_PATH}/data/relation_history.csv')
+        self.df_object_history = pd.read_csv(f'{cf.BASE_PATH}/data/object_history.csv')
+        self.df_request = pd.read_csv(f'{cf.BASE_PATH}/data/request.csv', nrows=self.shared.nrows)
+        self.df_item = pd.read_csv(f'{cf.BASE_PATH}/data/item.csv', low_memory=False)
 
-        self.df_relation_history = self.df_relation_history.rename(columns={'id': 'relationHistoryId'})
+        self.df_relation_history = self.df_relation_history.rename(columns={'id': 'rhId', 'tblid': 'rhTblId'})
+        self.df_object_history = self.df_object_history.rename(columns={'id': 'ohId', 'tblid': 'ohTblId'})
         self.df_request = self.df_request.rename(columns={'id': 'requestId'})
         self.df_item = self.df_item.rename(columns={'id': 'itemId'})
 
         self.df_relation_history = self.df_relation_history.fillna('')
+        self.df_object_history = self.df_object_history.fillna('')
         self.df_request = self.df_request.fillna('')
         self.df_item = self.df_item.fillna('')
 
 
     def run(self):
-        df = pd.read_csv(
-            f'{cf.BASE_PATH}/model/output/preprocessed/{self.shared.hashed}/{self.shared.dfs_names_train}.csv')
 
         label_path = f'{cf.BASE_PATH}/model/output/prepare/labels.csv'
         if not os.path.exists(label_path):
             self.construct_labels(label_path)
 
-        df_labels = pd.read_csv(label_path)
-
-        df = df.fillna('')
-        df = pd.merge(df, df_labels, left_on='id', right_on='requestId')
-        df = df.rename(columns={f'{self.label_index}': 'label'})
-        df = self.construct_text(df)
-
         generate_path = f'{cf.BASE_PATH}/model/output/prepare/{self.shared.hashed}'
-        if os.path.isdir(generate_path):
-            shutil.rmtree(generate_path)
-        os.makedirs(generate_path)
+        if not os.path.isdir(generate_path):
 
-        # TO-DO: Should probably not make this file each time.
-        df.to_csv(f'{generate_path}/{self.shared.dfs_names_train}_{self.label_index}.csv', columns=['id', 'text', 'label'], index=False)
+            os.makedirs(generate_path)
+            df_labels = pd.read_csv(label_path)
 
-    def shuffle_and_split(self, arr_x, arr_y, split, seed, categories):
+            df = pd.read_csv(f'{cf.BASE_PATH}/model/output/preprocessed/{self.shared.hashed}/{self.shared.dfs_names_train}.csv')
+            df = df.fillna('')
+            df = pd.merge(df, df_labels, left_on='id', right_on='requestId')
+            df = df.rename(columns={f'{self.label_index}': 'label'})
+            df = self.construct_text(df)            
+            df.to_csv(f'{generate_path}/{self.shared.dfs_names_train}_{self.label_index}.csv', columns=['id', 'text', 'label'], index=False)
+
+
+    @staticmethod
+    def shuffle_and_split(arr_x, arr_y, split, seed, categories):
 
         # Shuffle the data
         seed = seed

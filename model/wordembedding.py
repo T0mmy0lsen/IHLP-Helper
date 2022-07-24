@@ -46,10 +46,10 @@ class Word2Vec(tf.keras.Model):
 
 class WordEmbeddingLoader:
 
-    def __init__(self, shared=None, dim=128, x_train=None):
+    def __init__(self, shared=None, dim=128):
 
         vectorizer = tf.keras.layers.TextVectorization(standardize=None, max_tokens=200000, output_sequence_length=100)
-        text_ds = tf.data.Dataset.from_tensor_slices(x_train).batch(128)
+        text_ds = tf.data.Dataset.from_tensor_slices(np.concatenate((shared.x_train, shared.x_validate))).batch(128)
         vectorizer.adapt(text_ds)
 
         voc = vectorizer.get_vocabulary()
