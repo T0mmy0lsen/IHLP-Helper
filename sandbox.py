@@ -34,17 +34,18 @@ def preprocessing():
 
 
 def firstResponsible(df_rh=None, df_oh=None, df_it=None, id='3710927'):
-    tmp_df_rh = df_rh.rename(columns={'id': 'rhId', 'tblid': 'rhTblId'})
-    tmp_df_oh = df_oh.rename(columns={'id': 'ohId', 'tblid': 'ohTblId'})
-    # tmp_df_it = df_it.rename(columns={'id': 'itId'})
+
+    tmp_df_rh = df_rh.rename(columns={'id': 'requestHistoryId', 'tblid': 'rhTblId'})
+    tmp_df_oh = df_oh.rename(columns={'id': 'objectHistoryId', 'tblid': 'ohTblId'})
+    # tmp_df_it = df_it.rename(columns={'id': 'itemId'})
 
     tmp_df_rh = tmp_df_rh[tmp_df_rh['leftId'] == id]
 
     df_0 = tmp_df_rh.drop_duplicates(subset=['rightId'], keep='last')
     df_1 = pd.merge(df_0, tmp_df_oh, left_on='rhTblId', right_on='ohTblId')
-    df_2 = df_1.drop_duplicates(subset=['rhId'], keep='last')
-    # df_3 = pd.merge(df_2, df_it, left_on='rightId', right_on='itId', how='left')
-    # df_4 = df_3.drop_duplicates(subset=['rhId'], keep='last')
+    df_2 = df_1.drop_duplicates(subset=['requestHistoryId'], keep='last')
+    # df_3 = pd.merge(df_2, df_it, left_on='rightId', right_on='itemId', how='left')
+    # df_4 = df_3.drop_duplicates(subset=['requestHistoryId'], keep='last')
 
     tmp = df_2[df_2['name'].isin([
         'RequestServiceResponsible',
@@ -57,32 +58,28 @@ def firstResponsible(df_rh=None, df_oh=None, df_it=None, id='3710927'):
         print(df_2)
 
 
-def construct_labels():
+def construct_labels(df_rh, df_oh, df_it):
+
     label_path = f'{cf.BASE_PATH}/model/output/prepare/labels.csv'
-
-    df_relation_history = pd.read_csv(f'{cf.BASE_PATH}/data/relation_history.csv')
-    df_object_history = pd.read_csv(f'{cf.BASE_PATH}/data/object_history.csv')
-    df_request = pd.read_csv(f'{cf.BASE_PATH}/data/request.csv')
-    df_item = pd.read_csv(f'{cf.BASE_PATH}/data/item.csv', low_memory=False)
-
-    df_relation_history = df_relation_history.rename(columns={'id': 'rhId', 'tblid': 'rhTblId'})
-    df_object_history = df_object_history.rename(columns={'id': 'ohId', 'tblid': 'ohTblId'})
-    df_request = df_request.rename(columns={'id': 'requestId'})
-    df_item = df_item.rename(columns={'id': 'itemId'})
-
-    df_rh = df_relation_history.fillna('')
-    df_oh = df_object_history.fillna('')
-    df_it = df_item.fillna('')
-
     df_rh = df_rh.sort_values(by='tblTimeStamp')
-    df_rh = df_rh[df_rh['rightType'] == 'ItemRole']
-    df_oh = df_oh[df_oh['name'] == 'RequestServiceResponsible']
-    df_it = df_it[df_it['username'] != '']
+    df_oh = df_oh[df_oh['name'].isin(
+        ['RequestServiceResponsible', 'RequestIncidentResponsible', 'RequestServiceReceivedBy',
+         'RequestIncidentReceivedBy']
+    )]
 
+    df_rh_tmp = df_rh.drop_duplicates(subset=['leftId'], keep='last')
+    df_rh_tmp = df_rh_tmp[df_rh_tmp['leftType'].isin(['RequestService', 'RequestIncident'])]
+    length_expected = len(df_rh_tmp)
+    print("[Prepare] Expected length:", length_expected)
+
+    # We expect 1/4 not having an Object with Responsible and/or ReveivedBy
     df = pd.merge(df_rh, df_oh, left_on='rhTblId', right_on='ohTblId')
     df = pd.merge(df, df_it, left_on='rightId', right_on='itemId', how='left')
-
+    df = df.fillna('')
+    df = df[df['username'] != '']
     df = df.drop_duplicates(subset=['leftId'], keep='last')
+    length_actual = len(df)
+    print("[Prepare] Actual length:", length_actual)
 
     df = df.rename(columns={'leftId': 'requestId', 'username': 'assignee'})
     df.to_csv(label_path, index=False, columns=['requestId', 'assignee'])
@@ -132,20 +129,25 @@ def findMissing(df_rh, df_oh):
     df_tmp = df.drop_duplicates(subset=['leftId'], keep='last')
     print("All unique leftId after removal:", len(df_tmp))
 
+    df_tmp.to_csv(f'{cf.BASE_PATH}/data/sandbox/missing.csv')
+
 
 df = pd.read_csv(f'{cf.BASE_PATH}/data/request.csv')
 df_rh = pd.read_csv(f'{cf.BASE_PATH}/data/relation_history.csv', dtype=str)
 df_oh = pd.read_csv(f'{cf.BASE_PATH}/data/object_history.csv', dtype=str, low_memory=False)
-# df_it = pd.read_csv(f'{cf.BASE_PATH}/data/item.csv', dtype=str, low_memory=False)
+df_it = pd.read_csv(f'{cf.BASE_PATH}/data/item.csv', dtype=str, low_memory=False)
 
 df_rh = df_rh.fillna('')
 df_oh = df_oh.fillna('')
-# df_it = df_it.fillna('')
+df_it = df_it.fillna('')
 
-df_rh = df_rh.rename(columns={'id': 'rhId', 'tblid': 'rhTblId'})
-df_oh = df_oh.rename(columns={'id': 'ohId', 'tblid': 'ohTblId'})
-df_oh = df_oh[df_oh['name'].str.startswith('RequestService', na=False)]
+df_rh = df_rh.rename(columns={'id': 'requestHistoryId', 'tblid': 'rhTblId'})
+df_oh = df_oh.rename(columns={'id': 'objectHistoryId', 'tblid': 'ohTblId'})
+df_it = df_it.rename(columns={'id': 'itemId'})
 
 df_rh = df_rh.sort_values(by='tblTimeStamp')
 
-findMissing(df_rh, df_oh)
+# findMissing(df_rh, df_oh)
+# firstResponsible(df_rh, df_oh, id='33376492')
+construct_labels(df_rh, df_oh, df_it)
+

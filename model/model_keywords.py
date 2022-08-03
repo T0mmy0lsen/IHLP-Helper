@@ -4,6 +4,7 @@ from itertools import repeat
 import numpy as np
 from nltk import FreqDist
 from sklearn import preprocessing
+from sklearn.dummy import DummyClassifier
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer
@@ -83,8 +84,10 @@ class ModelKeywords:
 
         def evaluate(x, y, le):
             y_pred = np.array(list(map(classify, x, repeat(le))))
+            classifier = DummyClassifier()
+            print("Score:", classifier.score(x, y_pred))
             print("")
-            print(classification_report(y, y_pred))
+            # print(classification_report(y, y_pred))
 
         train_dict = get_data_train()
         validate_dict = get_data_validate()

@@ -36,8 +36,8 @@ def run():
     # get_stats(data_dict, shared)
 
     run_trivial(shared)         # 0.24/0.00 (4/1348 categories) # With danish only, stemmer and lemmatizer 0.25
-    run_keywords(shared)        # 0.48/0.28 (4/1348 categories) # With danish only, stemmer and lemmatizer 0.52
-    run_svm(shared)             # 0.67/0.27 (4/5316 categories) # With danish only, stemmer and lemmatizer 0.69
+    # run_keywords(shared)        # 0.48/0.28 (4/1348 categories) # With danish only, stemmer and lemmatizer 0.52
+    # run_svm(shared)             # 0.67/0.27 (4/5316 categories) # With danish only, stemmer and lemmatizer 0.69
     # run_cnn(shared)
 
     # ---------------------------------------------------------------------------------------------------------

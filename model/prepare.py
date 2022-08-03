@@ -93,19 +93,22 @@ class Prepare:
         df_it = self.df_item
 
         df_rh = df_rh.sort_values(by='tblTimeStamp')
-        df_rh = df_rh[df_rh['rightType'] == 'ItemRole']
-        df_oh = df_oh[df_oh['name'].isin([
-            'RequestServiceResponsible',
-            'RequestIncidentResponsible',
-            'RequestServiceReceivedBy',
-            'RequestIncidentReceivedBy',
-        ])]
-        df_it = df_it[df_it['username'] != '']
+        df_oh = df_oh[df_oh['name'].isin(
+            ['RequestServiceResponsible', 'RequestIncidentResponsible', 'RequestServiceReceivedBy', 'RequestIncidentReceivedBy']
+        )]
 
+        df_rh_tmp = df_rh.drop_duplicates(subset=['leftId'], keep='last')
+        df_rh_tmp = df_rh_tmp[df_rh_tmp['leftType'].isin(['RequestService', 'RequestIncident'])]
+        length_expected = len(df_rh_tmp)
+        print("[Prepare] Expected length:", length_expected)
+
+        # We expect 1/4 not having an Object with Responsible and/or ReveivedBy
         df = pd.merge(df_rh, df_oh, left_on='rhTblId', right_on='ohTblId')
         df = pd.merge(df, df_it, left_on='rightId', right_on='itemId', how='left')
-
+        df = df[df['username'] != '']
         df = df.drop_duplicates(subset=['leftId'], keep='last')
+        length_actual = len(df_rh_tmp)
+        print("[Prepare] Actual length:", length_actual)
 
         df = df.rename(columns={'leftId': 'requestId', 'username': 'assignee'})
         df.to_csv(label_path, index=False, columns=['requestId', 'assignee'])
