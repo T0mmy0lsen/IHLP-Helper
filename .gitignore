@@ -1,4 +1,2 @@
-__pycache__/
-model/__pycache__/
-venv/
-/app/frontend/node_modules/
+/frontend/node_modules/
+/backend/predict/data

@@ -23,6 +23,8 @@ from model.shared import SharedDict
 
 def run():
 
+    type = 'time'
+
     shared = SharedDict().default()
 
     # The job of Preprocess is to process the text s.t. its ready for the model.
@@ -30,14 +32,14 @@ def run():
     # The job of Prepare is to create the text and label columns.
     # If text or label are derived by some logic - it should be placed here.
     # Prepare(shared).fetch(amount=86000, categorical_index=False)
-    Prepare(shared).fetch(amount=86000, categorical_index=False, lang=None)
+    Prepare(shared, type=type, label_index='time').fetch(amount=86000, categorical_index=False, lang=None)
 
     # data_dict = get_data(shared)
     # get_stats(data_dict, shared)
 
-    run_trivial(shared)         # 0.24/0.00 (4/1348 categories) # With danish only, stemmer and lemmatizer 0.25
-    # run_keywords(shared)        # 0.48/0.28 (4/1348 categories) # With danish only, stemmer and lemmatizer 0.52
-    # run_svm(shared)             # 0.67/0.27 (4/5316 categories) # With danish only, stemmer and lemmatizer 0.69
+    # run_trivial(shared)
+    # run_keywords(shared)
+    # run_svm(shared, type=type)
     # run_cnn(shared)
 
     # ---------------------------------------------------------------------------------------------------------
@@ -50,8 +52,8 @@ def run():
     # Keyswords     -   164 categories; 0.18
     # SVM           -   164 categories; 0.33
 
-def run_svm(shared):
-    ModelSVM(shared)
+def run_svm(shared, type):
+    ModelSVM(shared, type)
 
 
 def run_keywords(shared):
@@ -105,8 +107,6 @@ def get_stats(data_dict, shared, num_words=1000):
 
     for idx, k in enumerate(freq_dict.keys()):
         print(len(data_dict[k]), "\t", shared.categories[idx], freq_dict_unique[k][:5])
-
-
 
 
 # Press the green button in the gutter to run the script.

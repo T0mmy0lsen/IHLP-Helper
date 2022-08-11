@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
+from ihlp.model.svm import SVM
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -25,13 +27,12 @@ SECRET_KEY = 'django-insecure-kkgh5r^)ert)+67#qcrfkr-5vhokf_z8&#^s7hi$w@a@n^e)r9
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'polls.apps.PollsConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -127,5 +128,13 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ORIGIN_WHITELIST = [
-     'http://127.0.0.1:3002'
+     'http://127.0.0.1:3000',
+     'http://127.0.0.1:3001',
+     'http://127.0.0.1:3002',
+     'http://localhost:3000',
+     'http://localhost:3001',
+     'http://localhost:3002',
 ]
+
+svm_responsible = SVM().load(type='responsible')
+svm_time = SVM().load(type='time')

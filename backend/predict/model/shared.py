@@ -17,7 +17,7 @@ class SharedDict:
             nrows=None,
             stemming=False,  # Makes the tekst hard to read. I don't think it's doing what is intended.
             lemmatize=True,
-            stopwords_path=f"{cf.BASE_PATH}/stopwords.txt",
+            stopwords_path=f"{cf.BASE_PATH}/data/input/stopwords.txt",
             replace_match_regex={
                 '': [
                     re.compile(r'gmt\+\d{2}:00', flags=re.MULTILINE),
@@ -90,7 +90,7 @@ class Shared:
     y_validate = None
     categories = None
 
-    folder = f'{cf.BASE_PATH}/model/output/preprocessed'
+    folder = f'{cf.BASE_PATH}/data/output/preprocessed'
 
     dfs_names = ['communication', 'request']
     dfs_index = [

@@ -58,7 +58,7 @@ class WordEmbeddingLoader:
         embeddings_index = {}
 
         skipped = 0
-        we_path = f'{config.BASE_PATH}/model/output/wordembedding/IHLP_{shared.hashed}_{dim}.txt'
+        we_path = f'{config.BASE_PATH}/data/output/wordembedding/IHLP_{shared.hashed}_{dim}.txt'
         with open(we_path) as f:
             for line in f:
                 word, coefs = line.split(maxsplit=1)
@@ -113,19 +113,19 @@ class WordEmbedding:
 
         self.shared = shared
 
-        path = f'{config.BASE_PATH}/model/output/wordembedding/IHLP_{self.shared.hashed}_{self.shared.word_embedding_dim}.txt'
+        path = f'{config.BASE_PATH}/data/output/wordembedding/IHLP_{self.shared.hashed}_{self.shared.word_embedding_dim}.txt'
         if os.path.exists(path):
             msg = f'Can not override existing word embedding {path}'
             print(msg)
             return
 
-        file_path = f'{config.BASE_PATH}/model/tmp/wordembedding/{self.shared.hashed}.csv'
+        file_path = f'{config.BASE_PATH}/data/tmp/wordembedding/{self.shared.hashed}.csv'
 
         if not os.path.exists(file_path):
             tmp_line = []
             for idx_name, name in enumerate(self.shared.dfs_names):
                 for df_index in self.shared.dfs_index[idx_name]:
-                    df_tmp = pd.read_csv(f'{config.BASE_PATH}/model/output/preprocessed/{self.shared.hashed}/{name}_{df_index}.csv')
+                    df_tmp = pd.read_csv(f'{config.BASE_PATH}/data/output/preprocessed/{self.shared.hashed}/{name}_{df_index}.csv')
                     df_tmp = df_tmp.fillna('')
                     for idx_row, row in df_tmp.iterrows():
                         tmp_line.append(row[df_index])

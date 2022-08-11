@@ -3,7 +3,7 @@ from collections import Counter
 import numpy as np
 from nltk.probability import FreqDist
 from sklearn.dummy import DummyClassifier
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, top_k_accuracy_score
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn import preprocessing
 
@@ -27,13 +27,9 @@ class ModelTrivial:
             else:
                 dummy_clf = DummyClassifier(strategy='prior')
             dummy_clf.fit(x_train, y_train)
-            y_pred = dummy_clf.predict(x_validate)
-            y_pred_proba = dummy_clf.predict_proba(x_validate)
-            y_pred_proba_top = []
-            for r in y_pred_proba:
-                y_pred_proba_top.append(sort_index(r)[:3]) # Top K = 3
-            # print(classification_report(y_validate, y_pred))
-            return sum([1 for i, e in enumerate(y_pred_proba_top) if y_validate[i] in e]) / len(y_validate)
+
+            probs = dummy_clf.predict_proba(x_validate)
+            print("[Trivial] Actual Score:", top_k_accuracy_score(y_validate, probs, k=3))
 
         def tokenize_and_stem(sentence):
             return sentence.split(" ")
@@ -84,8 +80,7 @@ class ModelTrivial:
         x_validate, y_validate = create_dataset(self.shared.x_validate, self.shared.y_validate, tfidf_vec, le)
 
         print("[Trivial] Predict by Highest Occurence")
-        score_actual = predict_trivial(x_train, y_train, x_validate, y_validate, le)
+        predict_trivial(x_train, y_train, x_validate, y_validate, le)
 
         print("[Trivial] Expected Score Train:", score_expected_train)
         print("[Trivial] Expected Score Validate:", score_expected_validate)
-        print("[Trivial] Actual Score:", score_actual)

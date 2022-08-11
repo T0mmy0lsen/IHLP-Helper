@@ -1,3 +1,4 @@
+import datetime
 import os
 import shutil
 
@@ -15,13 +16,13 @@ class Prepare:
     df_request = None
     df_item = None
 
-    def __init__(self, shared, label_index='assignee'):
+    def __init__(self, shared, label_index='responsible', type='responsible'):
 
         self.shared = shared
         self.label_index = label_index
-        self.run()
+        self.run(type)
 
-        path = f'{cf.BASE_PATH}/model/output/prepare/{self.shared.hashed}'
+        path = f'{cf.BASE_PATH}/data/output/prepare/{type}/{self.shared.hashed}'
         self.df = pd.read_csv(f'{path}/{self.shared.dfs_names_train}_{self.label_index}.csv')
         self.df = self.df.fillna('')
         self.df = self.df[self.df['label'] != '']
@@ -84,9 +85,69 @@ class Prepare:
         print("[Prepare] End")
         print("")
 
-    def construct_labels(self, label_path):
+    def construct_labels_time(self, label_path):
 
-        self.load()
+        def set_time(x):
+
+            result_communication = 0
+            result_solution = 0
+
+            if x['rightType'] == 'CommunicationSimple' and str(x['receivedDate'])[0] != '0':
+                received = datetime.datetime.strptime(str(x['receivedDate']), "%Y-%m-%d %H:%M:%S")
+                solution = datetime.datetime.strptime(str(x['tblTimeStamp']), "%Y-%m-%d %H:%M:%S")
+                result_communication = int(solution.timestamp()) - int(received.timestamp())
+                if result_communication <= 0:
+                    result_communication = 0
+
+            if str(x['receivedDate'])[0] != '0' and str(x['solutionDate'])[0] != '0':
+                received = datetime.datetime.strptime(str(x['receivedDate']), "%Y-%m-%d %H:%M:%S")
+                solution = datetime.datetime.strptime(str(x['solutionDate']), "%Y-%m-%d %H:%M:%S")
+                result_solution = int(solution.timestamp()) - int(received.timestamp())
+                if result_solution <= 0:
+                    result_solution = 0
+
+            if result_communication == 0 and result_solution == 0:
+                return 0
+            return np.min([result_solution, result_communication])
+
+
+        def set_time_bins(x, max_val, bins):
+            i = ((x.name + 1) * bins)
+            return int(i / (max_val + 1))
+
+
+        df_re = self.df_request
+        print(f"\t Expected length: {len(df_re)}")
+
+        df_rh = self.df_relation_history
+        df_rh = df_rh.sort_values(by='tblTimeStamp')
+        df_rh = df_rh[df_rh['leftType'].isin(['RequestService', 'RequestIncident'])]
+        df_rh = df_rh.drop_duplicates(subset=['rightId'], keep='last')
+
+        df = pd.merge(df_rh, df_re, left_on='leftId', right_on='requestId')
+
+        df_with_communication = df[df['rightType'] == 'CommunicationSimple']
+        df_with_communication = df_with_communication.drop_duplicates(subset=['leftId'], keep='last')
+
+        df_without_communication = df[~df['leftId'].isin(np.unique(df_with_communication['leftId'].to_numpy()))]
+        df_without_communication = df_without_communication.drop_duplicates(subset=['leftId'], keep='last')
+
+        df = pd.concat([df_with_communication, df_without_communication])
+
+        df['time_seconds'] = df.apply(lambda x: set_time(x), axis=1)
+        df = df[df['time_seconds'] > 0]
+        df = df.sort_values(by='time_seconds')
+        df = df.reset_index()
+
+        max_val = len(df)
+        df['time'] = df.apply(lambda x: set_time_bins(x, max_val, 5), axis=1)
+
+        print(f"\t Actual length: {len(df)}")
+
+        df.to_csv(label_path, index=False, columns=['requestId', 'time'])
+        return 0
+
+    def construct_labels_responsible(self, label_path):
 
         df_rh = self.df_relation_history
         df_oh = self.df_object_history
@@ -110,8 +171,8 @@ class Prepare:
         length_actual = len(df_rh_tmp)
         print("[Prepare] Actual length:", length_actual)
 
-        df = df.rename(columns={'leftId': 'requestId', 'username': 'assignee'})
-        df.to_csv(label_path, index=False, columns=['requestId', 'assignee'])
+        df = df.rename(columns={'leftId': 'requestId', 'username': 'responsible'})
+        df.to_csv(label_path, index=False, columns=['requestId', 'responsible'])
 
     def construct_text(self, df):
 
@@ -125,10 +186,10 @@ class Prepare:
 
     def load(self):
 
-        self.df_relation_history = pd.read_csv(f'{cf.BASE_PATH}/data/relation_history.csv')
-        self.df_object_history = pd.read_csv(f'{cf.BASE_PATH}/data/object_history.csv')
-        self.df_request = pd.read_csv(f'{cf.BASE_PATH}/data/request.csv', nrows=self.shared.nrows)
-        self.df_item = pd.read_csv(f'{cf.BASE_PATH}/data/item.csv', low_memory=False)
+        self.df_relation_history = pd.read_csv(f'{cf.BASE_PATH}/data/input/relation_history.csv')
+        self.df_object_history = pd.read_csv(f'{cf.BASE_PATH}/data/input/object_history.csv')
+        self.df_request = pd.read_csv(f'{cf.BASE_PATH}/data/input/request.csv', nrows=self.shared.nrows)
+        self.df_item = pd.read_csv(f'{cf.BASE_PATH}/data/input/item.csv', low_memory=False)
 
         self.df_relation_history = self.df_relation_history.rename(columns={'id': 'rhId', 'tblid': 'rhTblId'})
         self.df_object_history = self.df_object_history.rename(columns={'id': 'ohId', 'tblid': 'ohTblId'})
@@ -141,19 +202,28 @@ class Prepare:
         self.df_item = self.df_item.fillna('')
 
 
-    def run(self):
+    def run(self, type):
 
-        label_path = f'{cf.BASE_PATH}/model/output/prepare/labels.csv'
+        label_path = f'{cf.BASE_PATH}/data/output/prepare/labels_{type}.csv'
+        print(f"[Prepare] Creating labels for: {type}")
         if not os.path.exists(label_path):
-            self.construct_labels(label_path)
+            self.load()
+            if type == 'responsible':
+                self.construct_labels_responsible(label_path)
+            elif type == 'time':
+                self.construct_labels_time(label_path)
+            else:
+                print('Type is unknown. Use either \'responsible\' or \'time\'')
+                return 0
 
-        generate_path = f'{cf.BASE_PATH}/model/output/prepare/{self.shared.hashed}'
+        generate_path = f'{cf.BASE_PATH}/data/output/prepare/{type}/{self.shared.hashed}'
         if not os.path.isdir(generate_path):
 
             os.makedirs(generate_path)
+
             df_labels = pd.read_csv(label_path)
 
-            df = pd.read_csv(f'{cf.BASE_PATH}/model/output/preprocessed/{self.shared.hashed}/{self.shared.dfs_names_train}.csv')
+            df = pd.read_csv(f'{cf.BASE_PATH}/data/output/preprocessed/{self.shared.hashed}/{self.shared.dfs_names_train}.csv')
             df = df.fillna('')
             df = pd.merge(df, df_labels, left_on='id', right_on='requestId')
             df = df.rename(columns={f'{self.label_index}': 'label'})
