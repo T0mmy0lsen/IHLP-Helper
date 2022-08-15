@@ -5,7 +5,7 @@ from django.shortcuts import render
 
 # Create your views here.
 # python manage.py runserver
-from backend.app import settings
+from app import settings
 
 
 def get_request(request, request_id):

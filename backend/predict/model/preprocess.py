@@ -2,7 +2,6 @@ import csv
 import os
 import shutil
 import warnings
-from time import sleep
 
 import lemmy as lemmy
 import pandas as pd
@@ -10,11 +9,12 @@ from nltk import SnowballStemmer
 
 from danlp.models import load_spacy_model
 
-import config as cf
 import re
 
 from tqdm import tqdm
 from bs4 import BeautifulSoup
+
+from predict import config
 
 warnings.filterwarnings("ignore", category=UserWarning, module='bs4')
 tqdm.pandas()
@@ -45,8 +45,8 @@ class Preprocess:
 
             if not self.shared.exists:
                 self.dfs = [
-                    pd.read_csv(cf.PATH_INPUT_COMMUNICATION, nrows=self.shared.nrows),
-                    pd.read_csv(cf.PATH_INPUT_REQUEST, nrows=self.shared.nrows)
+                    pd.read_csv(config.PATH_INPUT_COMMUNICATION, nrows=self.shared.nrows),
+                    pd.read_csv(config.PATH_INPUT_REQUEST, nrows=self.shared.nrows)
                 ]
                 for idx, df in enumerate(self.dfs):
                     self.dfs[idx] = df.fillna('')

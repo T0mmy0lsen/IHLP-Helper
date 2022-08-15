@@ -5,8 +5,9 @@ import shutil
 import numpy as np
 from langdetect import detect
 
-import config as cf
 import pandas as pd
+
+from predict import config
 
 
 class Prepare:
@@ -22,7 +23,7 @@ class Prepare:
         self.label_index = label_index
         self.run(type)
 
-        path = f'{cf.BASE_PATH}/data/output/prepare/{type}/{self.shared.hashed}'
+        path = f'{config.BASE_PATH}/data/output/prepare/{type}/{self.shared.hashed}'
         self.df = pd.read_csv(f'{path}/{self.shared.dfs_names_train}_{self.label_index}.csv')
         self.df = self.df.fillna('')
         self.df = self.df[self.df['label'] != '']
@@ -186,10 +187,10 @@ class Prepare:
 
     def load(self):
 
-        self.df_relation_history = pd.read_csv(f'{cf.BASE_PATH}/data/input/relation_history.csv')
-        self.df_object_history = pd.read_csv(f'{cf.BASE_PATH}/data/input/object_history.csv')
-        self.df_request = pd.read_csv(f'{cf.BASE_PATH}/data/input/request.csv', nrows=self.shared.nrows)
-        self.df_item = pd.read_csv(f'{cf.BASE_PATH}/data/input/item.csv', low_memory=False)
+        self.df_relation_history = pd.read_csv(f'{config.BASE_PATH}/data/input/relation_history.csv')
+        self.df_object_history = pd.read_csv(f'{config.BASE_PATH}/data/input/object_history.csv')
+        self.df_request = pd.read_csv(f'{config.BASE_PATH}/data/input/request.csv', nrows=self.shared.nrows)
+        self.df_item = pd.read_csv(f'{config.BASE_PATH}/data/input/item.csv', low_memory=False)
 
         self.df_relation_history = self.df_relation_history.rename(columns={'id': 'rhId', 'tblid': 'rhTblId'})
         self.df_object_history = self.df_object_history.rename(columns={'id': 'ohId', 'tblid': 'ohTblId'})
@@ -204,7 +205,7 @@ class Prepare:
 
     def run(self, type):
 
-        label_path = f'{cf.BASE_PATH}/data/output/prepare/labels_{type}.csv'
+        label_path = f'{config.BASE_PATH}/data/output/prepare/labels_{type}.csv'
         print(f"[Prepare] Creating labels for: {type}")
         if not os.path.exists(label_path):
             self.load()
@@ -216,14 +217,14 @@ class Prepare:
                 print('Type is unknown. Use either \'responsible\' or \'time\'')
                 return 0
 
-        generate_path = f'{cf.BASE_PATH}/data/output/prepare/{type}/{self.shared.hashed}'
+        generate_path = f'{config.BASE_PATH}/data/output/prepare/{type}/{self.shared.hashed}'
         if not os.path.isdir(generate_path):
 
             os.makedirs(generate_path)
 
             df_labels = pd.read_csv(label_path)
 
-            df = pd.read_csv(f'{cf.BASE_PATH}/data/output/preprocessed/{self.shared.hashed}/{self.shared.dfs_names_train}.csv')
+            df = pd.read_csv(f'{config.BASE_PATH}/data/output/preprocessed/{self.shared.hashed}/{self.shared.dfs_names_train}.csv')
             df = df.fillna('')
             df = pd.merge(df, df_labels, left_on='id', right_on='requestId')
             df = df.rename(columns={f'{self.label_index}': 'label'})

@@ -5,8 +5,9 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import top_k_accuracy_score
 
-from model.preprocess import Preprocess
-from model.shared import SharedDict
+from predict.model.prepare import Prepare
+from predict.model.preprocess import Preprocess
+from predict.model.shared import SharedDict
 
 
 class SVM:
@@ -22,14 +23,14 @@ class SVM:
     def __init__(self):
         pass
 
-    def load(self, type='responsible', base_path='C:\\Users\\tool\\git\\ihlp-helper\\'):
+    def load(self, type='responsible', base_path='C:/Users/tool/git/ihlp-helper/backend/predict'):
 
         self.type = type
         self.shared = SharedDict().default()
         self.shared.dfs_index = [['text']]
         self.preprocess = Preprocess(self.shared, for_predict=True)
 
-        path_pickle = f"{base_path}/model/output/pickle/{self.type}/EEF986E6"
+        path_pickle = f"{base_path}/data/output/pickle/{self.type}/EEF986E6"
         path_pickle_clf = f"{path_pickle}/tfidf.pickle"
         path_pickle_tfi = f"{path_pickle}/clf.pickle"
         path_pickle_le = f"{path_pickle}/le.pickle"

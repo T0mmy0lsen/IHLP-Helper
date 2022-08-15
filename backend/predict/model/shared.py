@@ -3,7 +3,7 @@ import json
 import os
 import re
 
-import config as cf
+from predict import config
 
 
 class SharedDict:
@@ -17,7 +17,7 @@ class SharedDict:
             nrows=None,
             stemming=False,  # Makes the tekst hard to read. I don't think it's doing what is intended.
             lemmatize=True,
-            stopwords_path=f"{cf.BASE_PATH}/data/input/stopwords.txt",
+            stopwords_path=f"{config.BASE_PATH}/data/input/stopwords.txt",
             replace_match_regex={
                 '': [
                     re.compile(r'gmt\+\d{2}:00', flags=re.MULTILINE),
@@ -90,7 +90,7 @@ class Shared:
     y_validate = None
     categories = None
 
-    folder = f'{cf.BASE_PATH}/data/output/preprocessed'
+    folder = f'{config.BASE_PATH}/data/output/preprocessed'
 
     dfs_names = ['communication', 'request']
     dfs_index = [
@@ -120,7 +120,7 @@ class Shared:
         self.word_embedding_epochs = word_embedding_epochs
 
         if stopwords_path is not None:
-            with open(f"{cf.BASE_PATH}/stopwords.txt") as f:
+            with open(f"{config.BASE_PATH}/data/input/stopwords.txt") as f:
                 self.stopwords = [line.replace('\n', '') for line in f]
 
         # Hash the config and check if there is a folder with the same config
