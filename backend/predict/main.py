@@ -1,29 +1,26 @@
 # This is a fun Python script.
 
-import json
-import re
-import os
-import hashlib
-
 import numpy as np
 from nltk import FreqDist
 
-import config as cf
-from model.model_keywords import ModelKeywords
-from model.model_svm import ModelSVM
+from predict.model.model_cnn import ModelCNN
+from predict.model.model_keywords import ModelKeywords
+from predict.model.model_svm import ModelSVM
 
-from model.preprocess import Preprocess
-from model.prepare import Prepare
+from predict.model.preprocess import Preprocess
+
 # from model.train import Train
 # from model.wordembedding import WordEmbedding, WordEmbeddingLoader
 
-from model.model_trivial import ModelTrivial
-from model.shared import SharedDict
+from predict.model.model_trivial import ModelTrivial
+from predict.model.shared import SharedDict
+from predict.model.prepare import Prepare
+from predict.model.wordembedding import WordEmbedding, WordEmbeddingLoader
 
 
 def run():
 
-    type = 'time'
+    category_type = 'responsible'
 
     shared = SharedDict().default()
 
@@ -32,14 +29,23 @@ def run():
     # The job of Prepare is to create the text and label columns.
     # If text or label are derived by some logic - it should be placed here.
     # Prepare(shared).fetch(amount=86000, categorical_index=False)
-    Prepare(shared, type=type, label_index='time').fetch(amount=86000, categorical_index=False, lang=None)
+
+    Prepare(shared, category_type=category_type, label_index=category_type).fetch(
+        amount=86000,
+        categorical_index=False,
+        lang=None,
+        # boost=True,
+        # roll=True,
+        # top=4,
+        # multiplier=4
+    )
 
     # data_dict = get_data(shared)
     # get_stats(data_dict, shared)
 
     # run_trivial(shared)
     # run_keywords(shared)
-    # run_svm(shared, type=type)
+    run_svm(shared, category_type)
     # run_cnn(shared)
 
     # ---------------------------------------------------------------------------------------------------------
@@ -52,8 +58,9 @@ def run():
     # Keyswords     -   164 categories; 0.18
     # SVM           -   164 categories; 0.33
 
-def run_svm(shared, type):
-    ModelSVM(shared, type)
+
+def run_svm(shared, category_type):
+    ModelSVM(shared, category_type)
 
 
 def run_keywords(shared):
@@ -67,11 +74,11 @@ def run_trivial(shared):
 def run_cnn(shared):
     # This creates the word embedding.
     # The word embedding does not rely on Prepare. This means any Preprocess'ed data can be used to train the word embedder.
-    # WordEmbedding(shared)
+    WordEmbedding(shared)
     # Load in the created word embedder and create the Word Embedding layer.
-    # WordEmbeddingLoader(shared)
+    WordEmbeddingLoader(shared)
     # Train the model.
-    # ModelCNN(shared)
+    ModelCNN(shared)
     pass
 
 

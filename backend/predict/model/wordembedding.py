@@ -8,17 +8,14 @@ The transform.py creates the input-file by transforming the raw data from the da
 
 import io
 import os
-import re
 import shutil
 
 import tqdm
-
-import config
-import string
-
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+
+from predict import config
 
 
 class Word2Vec(tf.keras.Model):
@@ -48,7 +45,7 @@ class WordEmbeddingLoader:
 
     def __init__(self, shared=None, dim=128):
 
-        vectorizer = tf.keras.layers.TextVectorization(standardize=None, max_tokens=200000, output_sequence_length=100)
+        vectorizer = tf.keras.layers.TextVectorization(standardize=None, max_tokens=200000, output_sequence_length=128)
         text_ds = tf.data.Dataset.from_tensor_slices(np.concatenate((shared.x_train, shared.x_validate))).batch(128)
         vectorizer.adapt(text_ds)
 
@@ -125,7 +122,7 @@ class WordEmbedding:
             tmp_line = []
             for idx_name, name in enumerate(self.shared.dfs_names):
                 for df_index in self.shared.dfs_index[idx_name]:
-                    df_tmp = pd.read_csv(f'{config.BASE_PATH}/data/output/preprocessed/{self.shared.hashed}/{name}_{df_index}.csv')
+                    df_tmp = pd.read_csv(f'{config.BASE_PATH}/data/output/preprocess/{self.shared.hashed}/{name}_{df_index}.csv')
                     df_tmp = df_tmp.fillna('')
                     for idx_row, row in df_tmp.iterrows():
                         tmp_line.append(row[df_index])
@@ -133,13 +130,13 @@ class WordEmbedding:
             tmp.to_csv(file_path, header=False, index=False, encoding='utf-8')
         else:
             print(f'There is already a tmp-file for the Word Embedding')
-            print(f'Remove the folder {self.shared.hashed}.csv file in /tmp/wordembedding to rebuild it')
+            print(f'Remove the folder {self.shared.hashed}.csv file in /data/tmp/wordembedding to rebuild it')
 
         text_ds = tf.data.TextLineDataset(file_path).filter(lambda x: tf.cast(tf.strings.length(x), bool))
 
         # Define the vocabulary size and the number of words in a sequence.
         vocab_size = 200000
-        sequence_length = 100
+        sequence_length = 128
 
         # Use the `TextVectorization` layer to normalize, split, and map strings to
         # integers. Set the `output_sequence_length` length to pad all samples to the
@@ -157,7 +154,7 @@ class WordEmbedding:
 
         sequences = list(text_vector_ds.as_numpy_iterator())  # It gets slow from this point
 
-        generate_path = f'{config.BASE_PATH}/model/tmp/generated/{self.shared.hashed}'
+        generate_path = f'{config.BASE_PATH}/data/tmp/wordembedding/generated/{self.shared.hashed}'
         if os.path.isdir(generate_path):
             shutil.rmtree(generate_path)
         os.makedirs(generate_path)
@@ -208,7 +205,7 @@ class WordEmbedding:
         # Targets
         str_data = "\n".join([str(x) for x in targets])
         if len(str_data) > 0:
-            f = open(f'{config.BASE_PATH}/model/tmp/generated/{self.shared.hashed}/targets_{idx}.dat', 'a')
+            f = open(f'{config.BASE_PATH}/data/tmp/wordembedding/generated/{self.shared.hashed}/targets_{idx}.dat', 'a')
             f.write(str_data)
             f.close()
 
@@ -216,7 +213,7 @@ class WordEmbedding:
         tmp = [e.numpy().flatten() for e in contexts]
         str_data = "\n".join([", ".join([str(y) for y in x]) for x in tmp])
         if len(str_data) > 0:
-            f = open(f'{config.BASE_PATH}/model/tmp/generated/{self.shared.hashed}/contexts_{idx}.dat', 'a')
+            f = open(f'{config.BASE_PATH}/data/tmp/wordembedding/generated/{self.shared.hashed}/contexts_{idx}.dat', 'a')
             f.write(str_data)
             f.close()
 
@@ -224,7 +221,7 @@ class WordEmbedding:
         tmp = [e.numpy().flatten() for e in labels]
         str_data = "\n".join([", ".join([str(y) for y in x]) for x in tmp])
         if len(str_data) > 0:
-            f = open(f'{config.BASE_PATH}/model/tmp/generated/{self.shared.hashed}/labels_{idx}.dat', 'a')
+            f = open(f'{config.BASE_PATH}/data/tmp/wordembedding/generated/{self.shared.hashed}/labels_{idx}.dat', 'a')
             f.write(str_data)
             f.close()
 

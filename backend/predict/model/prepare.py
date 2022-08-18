@@ -1,11 +1,13 @@
 import datetime
 import os
+import random
 import shutil
 
 import numpy as np
 from langdetect import detect
 
 import pandas as pd
+from tqdm import tqdm
 
 from predict import config
 
@@ -17,32 +19,41 @@ class Prepare:
     df_request = None
     df_item = None
 
-    def __init__(self, shared, label_index='responsible', type='responsible'):
+    def __init__(self, shared, label_index='responsible', category_type='responsible'):
 
         self.shared = shared
         self.label_index = label_index
-        self.run(type)
+        self.run(category_type)
 
-        path = f'{config.BASE_PATH}/data/output/prepare/{type}/{self.shared.hashed}'
-        self.df = pd.read_csv(f'{path}/{self.shared.dfs_names_train}_{self.label_index}.csv')
+        self.path = f'{config.BASE_PATH}/data/output/prepare/{category_type}/{self.shared.hashed}'
+        self.df = pd.read_csv(f'{self.path}/{self.shared.dfs_names_train}_{self.label_index}.csv')
         self.df = self.df.fillna('')
         self.df = self.df[self.df['label'] != '']
 
     def fetch(self,
+              boost=False,
               categorical: bool = True,
               categorical_index: bool = True,
-              amount: int = 1000,
+              amount: int = 0,
               index_label: str = 'label',
               index_text: str = 'text',
               split=.25,
               seed=123,
               filter=None,
-              lang='da'):
+              lang='da',
+              top=None,
+              roll: bool = False,
+              multiplier: int = 1
+        ):
 
         print("[Prepare] Start")
 
         if filter is not None:
             self.df = self.df[self.df[index_label].isin(filter)]
+
+        if top is not None:
+            top_list = self.df[index_label].value_counts().index.tolist()
+            self.df = self.df[self.df[index_label].isin(top_list[:top])]
 
         if lang is not None:
 
@@ -55,24 +66,92 @@ class Prepare:
             self.df['lang'] = self.df.progress_apply(lambda x: detect_lang(x), axis=1)
             self.df = self.df[self.df['lang'] == lang]
 
+        if amount != 0 and not boost:
+            self.df = self.df.head(amount)
+
         categories = []
+
         if categorical:
-            categories = self.df.head(amount)[index_label].to_numpy()
+            categories = self.df[index_label].to_numpy()
             categories = np.sort(np.unique(categories))
 
-        arr_x = self.df.head(amount)[index_text].to_numpy()
+        """
+        if categorical and boost:
+            path = f'{self.path}/{self.shared.dfs_names_train}_{self.label_index}_boosted.csv'
+            if os.path.isdir(path):
+                self.df = pd.read_csv(path)
+                self.df = self.df.fillna('')
+                self.df = self.df[self.df['label'] != '']
+            else:
+                labels_count = self.df[index_label].value_counts()
+                labels_count_max = labels_count.max()
+                new_df = pd.DataFrame(columns=self.df.columns)
+                for category in tqdm(categories):
+                    current_count = labels_count[category]
+                    tmp_df = self.df[self.df[index_label] == category]
+                    for _ in range(int(labels_count_max / current_count)):
+                        new_df = pd.concat([tmp_df, new_df])
+                self.df = new_df
+                self.df = self.df.fillna('')
+                self.df = self.df[self.df['label'] != '']
+                self.df.to_csv(path)
+        """
+
+        arr_x = self.df[index_text].to_numpy()
         arr_y = []
 
         if categorical_index:
-            for idx, el in self.df.head(amount).iterrows():
+            for idx, el in self.df.iterrows():
                 i = np.where(categories == el[index_label])
                 arr_y.append(i)
         else:
-            arr_y = self.df.head(amount)[index_label].to_numpy()
+            arr_y = self.df[index_label].to_numpy()
 
         arr_y = np.array(arr_y).flatten()
 
         x_train, y_train, x_validate, y_validate, categories = self.shuffle_and_split(arr_x, arr_y, split, seed, categories)
+
+        if categorical and boost:
+
+            labels_count = self.df[index_label].value_counts()
+            labels_count_max = labels_count.max()
+
+            append_x_train = []
+            append_y_train = []
+
+            for i, y in enumerate(tqdm(y_train)):
+                current_count = labels_count[y]
+                for _ in range(int((labels_count_max / current_count) * multiplier) - 1):
+                    append_x_train.append(x_train[i])
+                    append_y_train.append(y)
+
+            def bulk_concatenate(data, output=None, size=5000):
+                prev_i = 0
+                for i, s in enumerate(tqdm(data)):
+                    if i > 0 and i % size == 0:
+                        part_output = np.array(data[prev_i:i])
+                        if output is None:
+                            output = part_output[:]
+                        else:
+                            output = np.concatenate((output, part_output), axis=0)
+                        prev_i = i
+                part_output = np.array(data[prev_i:])
+                if output is None:
+                    output = part_output[:]
+                else:
+                    output = np.concatenate((output, part_output), axis=0)
+                return output
+
+            # x_train = bulk_concatenate(append_x_train, output=[])
+            x_train = bulk_concatenate(append_x_train, output=x_train)
+            # y_train = bulk_concatenate(append_y_train, output=[])
+            y_train = bulk_concatenate(append_y_train, output=y_train)
+
+            if roll:
+                for i, x in enumerate(tqdm(x_train)):
+                    np_str = np.array(x.split(" "))
+                    x_train[i] = " ".join(np.roll(np_str, random.randint(0, len(np_str))))
+
 
         self.shared.x_train = x_train
         self.shared.y_train = y_train
@@ -203,28 +282,28 @@ class Prepare:
         self.df_item = self.df_item.fillna('')
 
 
-    def run(self, type):
+    def run(self, category_type):
 
-        label_path = f'{config.BASE_PATH}/data/output/prepare/labels_{type}.csv'
-        print(f"[Prepare] Creating labels for: {type}")
+        label_path = f'{config.BASE_PATH}/data/output/prepare/labels_{category_type}.csv'
+        print(f"[Prepare] Creating labels for: {category_type}")
         if not os.path.exists(label_path):
             self.load()
-            if type == 'responsible':
+            if category_type == 'responsible':
                 self.construct_labels_responsible(label_path)
-            elif type == 'time':
+            elif category_type == 'time':
                 self.construct_labels_time(label_path)
             else:
                 print('Type is unknown. Use either \'responsible\' or \'time\'')
                 return 0
 
-        generate_path = f'{config.BASE_PATH}/data/output/prepare/{type}/{self.shared.hashed}'
+        generate_path = f'{config.BASE_PATH}/data/output/prepare/{category_type}/{self.shared.hashed}'
         if not os.path.isdir(generate_path):
 
             os.makedirs(generate_path)
 
             df_labels = pd.read_csv(label_path)
 
-            df = pd.read_csv(f'{config.BASE_PATH}/data/output/preprocessed/{self.shared.hashed}/{self.shared.dfs_names_train}.csv')
+            df = pd.read_csv(f'{config.BASE_PATH}/data/output/preprocess/{self.shared.hashed}/{self.shared.dfs_names_train}.csv')
             df = df.fillna('')
             df = pd.merge(df, df_labels, left_on='id', right_on='requestId')
             df = df.rename(columns={f'{self.label_index}': 'label'})

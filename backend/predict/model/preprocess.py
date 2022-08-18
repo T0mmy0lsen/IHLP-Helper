@@ -139,9 +139,9 @@ class Preprocess:
 
     def stemming(self, df, index):
         if self.for_predict:
-            df[index] = df.apply(lambda x: Preprocess.get_stemmer(x[index], p.stemmer), axis=1)
+            df[index] = df.apply(lambda x: Preprocess.get_stemmer(x[index], self.stemmer), axis=1)
         else:
-            df[index] = df.progress_apply(lambda x: Preprocess.get_stemmer(x[index], p.stemmer), axis=1)
+            df[index] = df.progress_apply(lambda x: Preprocess.get_stemmer(x[index], self.stemmer), axis=1)
 
     @staticmethod
     def get_remove_html_tags(line):

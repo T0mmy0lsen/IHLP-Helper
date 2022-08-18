@@ -6,27 +6,27 @@ from sklearn import preprocessing, svm
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import classification_report, top_k_accuracy_score
 
-import config
-from model.prepare import Prepare
-from model.preprocess import Preprocess
-from model.shared import SharedDict
+from predict.model.prepare import Prepare
+from predict.model.preprocess import Preprocess
+from predict.model.shared import SharedDict
+import predict.config as config
 
 
 class ModelSVM:
 
-    def __init__(self, shared=None, type='responsible'):
+    def __init__(self, shared=None, category_type='responsible'):
         if shared is None:
             self.shared = SharedDict().default()
             self.prepare()
         else:
             self.shared = shared
-        self.run(type)
+        self.run(category_type)
 
     def prepare(self):
         Preprocess(self.shared)
         # Prepare(self.shared).fetch(amount=86000, categorical_index=False)
         # Prepare(self.shared).fetch(amount=86000, categorical_index=False, filter=['thoje', 'tpieler', 'alib', 'ep'])
-        Prepare(self.shared, type=type, label_index='time').fetch(amount=86000, categorical_index=False, lang=None)
+        Prepare(self.shared, type='time', label_index='time').fetch(amount=86000, categorical_index=False, lang=None)
 
 
     def run(self, type):
@@ -91,3 +91,4 @@ class ModelSVM:
 
         clf = train_svm_classifier(x_train, y_train)
         evaluate(clf, x_validate, y_validate)
+        print("Good times")

@@ -90,7 +90,7 @@ class Shared:
     y_validate = None
     categories = None
 
-    folder = f'{config.BASE_PATH}/data/output/preprocessed'
+    folder = f'{config.BASE_PATH}/data/output/preprocess'
 
     dfs_names = ['communication', 'request']
     dfs_index = [

@@ -4,6 +4,7 @@
     - Individual active hours.
 - I should be able to argue for why Pm||C_max is NP-Hard thus using a hueristic
 - I should be able to do a worst care analysis
+- Each machine has different 'time' for same task.
 
 It is the intent that each team is equally able to solve an issue within the same timeframe.
 This is offen not the case it pratice, but a system that expects this, would enable the team to do so over time. 
