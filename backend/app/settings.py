@@ -137,8 +137,8 @@ CORS_ORIGIN_WHITELIST = [
      'http://localhost:3002',
 ]
 
-# svm_responsible = SVM()
-# svm_responsible.load(type='responsible')
+svm_responsible = SVM()
+svm_responsible.load(type='responsible')
 
-# svm_time = SVM()
-# svm_time.load(type='time')
+svm_time = SVM()
+svm_time.load(type='time')
