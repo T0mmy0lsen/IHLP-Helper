@@ -33,17 +33,17 @@ class Prepare:
     def fetch(self,
               boost=False,
               categorical: bool = True,
-              categorical_index: bool = True,
-              amount: int = 0,
+              categorical_index: bool = False,  # Convert labels to indexes - needed for CNN. Should probably change this.
+              amount: int = 0,  # Choose length of input
               index_label: str = 'label',
               index_text: str = 'text',
-              split=.25,
-              seed=123,
-              filter=None,
-              lang='da',
-              top=None,
-              roll: bool = False,
-              multiplier: int = 1
+              split=.25,  # Split train and validation set
+              seed=123,  # For split usage
+              filter=None,  # Array-like, only use labels given in the filter
+              lang=None,  # None, 'da' or 'en'
+              top=None,  # Only use top-k labels with highest occurrence
+              roll: bool = False,  # If boost=True and categorical=True, np.roll the boosted texts (done randomly)
+              multiplier: int = 1  # If boost=True and categorical=True, multiply output
         ):
 
         print("[Prepare] Start")
@@ -246,12 +246,14 @@ class Prepare:
         # We expect 1/4 not having an Object with Responsible and/or ReveivedBy
         df = pd.merge(df_rh, df_oh, left_on='rhTblId', right_on='ohTblId')
         df = pd.merge(df, df_it, left_on='rightId', right_on='itemId', how='left')
+        df = df.fillna('')
         df = df[df['username'] != '']
         df = df.drop_duplicates(subset=['leftId'], keep='last')
         length_actual = len(df_rh_tmp)
         print("[Prepare] Actual length:", length_actual)
 
         df = df.rename(columns={'leftId': 'requestId', 'username': 'responsible'})
+        df['responsible'] = df.apply(lambda x: x['responsible'].lower(), axis=1)
         df.to_csv(label_path, index=False, columns=['requestId', 'responsible'])
 
     def construct_text(self, df):

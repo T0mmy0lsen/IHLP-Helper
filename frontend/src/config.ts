@@ -1,7 +1,7 @@
 import {Main, Button, Action, Typography, Route, Sider, Section, Get} from 'react-antd-admin-panel';
 import {faSearch} from "@fortawesome/free-solid-svg-icons";
 import Error from "./views/Error";
-import Home from "./views/Home";
+import Search from "./views/Search";
 
 let isProd = process.env.NODE_ENV === 'production';
 
@@ -19,7 +19,7 @@ export default {
                 .addRowEnd([
                     new Typography()
                         .style({ marginTop: 1 })
-                        .label(`John Doe`)
+                        .label(`IHLP Helper`)
                 ])
             );
         },
@@ -44,14 +44,16 @@ export default {
     },
     routes: [
         new Route().key('/')
-            .component(Home),
+            .exact()
+            .component(Search),
         new Route().key('/error')
+            .exact()
             .component(Error),
     ],
     drawer: (next: any) => {
         next(new Section().add(new Sider()
             .add(new Button().access(true)
-                .action(new Action().route(() => '/').label('Home').fontawesome(faSearch)))
+                .action(new Action().route(() => '/').label('Search').fontawesome(faSearch)))
         ));
     },
 }

@@ -15,23 +15,16 @@ import predict.config as config
 class ModelSVM:
 
     def __init__(self, shared=None, category_type='responsible'):
-        if shared is None:
-            self.shared = SharedDict().default()
-            self.prepare()
-        else:
+        if shared is not None:
             self.shared = shared
-        self.run(category_type)
+            self.run(category_type)
+        else:
+            print("Shared is None. Abort.")
+            exit(1)
 
-    def prepare(self):
-        Preprocess(self.shared)
-        # Prepare(self.shared).fetch(amount=86000, categorical_index=False)
-        # Prepare(self.shared).fetch(amount=86000, categorical_index=False, filter=['thoje', 'tpieler', 'alib', 'ep'])
-        Prepare(self.shared, type='time', label_index='time').fetch(amount=86000, categorical_index=False, lang=None)
+    def run(self, category_type):
 
-
-    def run(self, type):
-
-        path_pickle = f"{config.BASE_PATH}/data/output/pickle/{type}/{self.shared.hashed}"
+        path_pickle = f"{config.BASE_PATH}/data/output/pickle/{category_type}/{self.shared.hashed}"
         path_pickle_clf = f"{path_pickle}/tfidf.pickle"
         path_pickle_tfi = f"{path_pickle}/clf.pickle"
         path_pickle_le = f"{path_pickle}/le.pickle"
@@ -51,12 +44,12 @@ class ModelSVM:
         def create_vectorizer():
 
             tfidf_vectorizer = TfidfVectorizer(
-                max_df=.9,
+                max_df=.95,
                 max_features=200000,
-                min_df=.05,
+                min_df=.01,
                 stop_words=None,
                 use_idf=True,
-                ngram_range=(1, 3)
+                ngram_range=(1, 5)
             )
 
             # training_data = [e.split(" ") for e in self.shared.x_train]
@@ -79,7 +72,11 @@ class ModelSVM:
             x_validate = np.delete(x_validate, indexes, axis=0)
             y_validate = np.delete(y_validate, indexes, axis=0)
             probs = clf.predict_proba(x_validate)
-            print("[SVM] Actual Score:", top_k_accuracy_score(y_validate, probs, k=3, labels=clf.classes_))
+            top_k = 3
+            if category_type == 'time':
+                top_k = 1
+            print("[SVM] Actual Score:", top_k_accuracy_score(y_validate, probs, k=top_k, labels=clf.classes_))
+
 
         vectorizer = create_vectorizer()
 

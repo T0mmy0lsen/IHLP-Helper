@@ -23,14 +23,14 @@ class SVM:
     def __init__(self):
         pass
 
-    def load(self, type='responsible', base_path='C:/Users/tool/git/ihlp-helper/backend/predict'):
+    def load(self, type='responsible', base_path='C:/Git/ihlp-helper/backend/predict'):
 
         self.type = type
         self.shared = SharedDict().default()
         self.shared.dfs_index = [['text']]
         self.preprocess = Preprocess(self.shared, for_predict=True)
 
-        path_pickle = f"{base_path}/data/output/pickle/{self.type}/EEF986E6"
+        path_pickle = f"{base_path}/data/output/pickle/{self.type}/4B0BE2C3"
         path_pickle_clf = f"{path_pickle}/tfidf.pickle"
         path_pickle_tfi = f"{path_pickle}/clf.pickle"
         path_pickle_le = f"{path_pickle}/le.pickle"
