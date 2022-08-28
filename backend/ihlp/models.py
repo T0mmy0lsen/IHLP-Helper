@@ -13,6 +13,7 @@ class Predict(models.Model):
 
 class Slot(models.Model):
 
+    keep = models.BooleanField()
     user = models.CharField(max_length=255)
     time = models.IntegerField()
     index = models.IntegerField()

@@ -10,14 +10,14 @@ from ihlp.models import Schedule, Machine, Slot, Predict
 from ihlp.models_ihlp import Request
 
 
-def setPredict(id=None, user=None, time=None):
+def setPredict(id=None, user=None, time=None, keep=None):
 
     machine = Machine.objects.filter(user=user).first()
     schedule = machine.schedule_set.first()
     machines = schedule.machines.all()
 
     # Get all existing slots from the Schedule and add the new slot.
-    s = Slot.objects.create(user=user, time=time, index=0)
+    s = Slot.objects.create(user=user, time=time, index=0, keep=keep)
 
     slots = np.concatenate([list(m.slots.all()) for m in machines])
     slots = np.concatenate((slots, [s]))
@@ -46,12 +46,15 @@ def getPredict(id=None):
     else:
         return None
 
+
+
     predict_time_indexes = np.argpartition(predict_time_prob, -3)[-3:]
     predict_time_indexes = [int(t) for t in predict_time_indexes]
     predict_responsible_indexes = np.argpartition(predict_responsible_prob, -3)[-3:]
     predict_responsible_indexes = [int(t) for t in predict_responsible_indexes]
 
-    if BOOT is not None and not BOOT.svm_loaded:
+    """
+     if BOOT is not None and not BOOT.svm_loaded:
         # For debug purposes
         BOOT.label_encoder_time = preprocessing.LabelEncoder()
         BOOT.label_encoder_time.fit([1, 2, 3, 4, 5])
@@ -67,6 +70,9 @@ def getPredict(id=None):
             'afredsl',
             'agd',
         ])
+    """
+
+    avaliable_users = []
 
     labels_time = BOOT.label_encoder_time.inverse_transform(predict_time_indexes)
     labels_responsible = BOOT.label_encoder_responsible.inverse_transform(predict_responsible_indexes)
@@ -88,32 +94,40 @@ def getPredict(id=None):
             continue
 
         schedule = machine.schedule_set.first()
-
         machines = schedule.machines.all()
     
         # Get all existing slots from the Schedule and add the new slot.
-        s = Slot.objects.create(user=user, time=labels_time[0], index=id)
+        # s = Slot.objects.create(user=user, time=labels_time[0], index=id)
+        s = Slot.objects.create(user=user, time=1, index=id, keep=False)
 
         slots = np.concatenate([list(m.slots.all()) for m in machines])
         slots = np.concatenate((slots, [s]))
 
         schedules = list(longest_processing_time_first(machines, slots, id=id))
-        team_users = [m.user for m in machines if m.user in BOOT.label_encoder_responsible.classes_]
-        team_indexes = BOOT.label_encoder_responsible.transform(team_users)
-        responsible_index = BOOT.label_encoder_responsible.transform([responsible])[0]
+        # team_users = [m.user for m in machines if m.user in BOOT.label_encoder_responsible.classes_]
+        # team_indexes = BOOT.label_encoder_responsible.transform(team_users)
 
         result = {
-            "sum": sum(sum([int(_m['time']) for _m in m]) for m in schedules) - int(labels_time[0]),
-            "user": user,
-            "time": int(labels_time[0]),
-            "user_prob": round(predict_responsible_prob[responsible_index], 3),
+            "time": 1,  # int(labels_time[0]),
             "team": schedule.name,
-            "team_prob": round(sum(predict_responsible_prob[team_indexes]), 3),
+            "user": user,
+            "team_time": 0,
+            "team_prob": 0,
             "schedule": {}
         }
 
+        users = [m.user for m in machines]
+        users_index = BOOT.label_encoder_responsible.transform(users)
+
         for i, machine in enumerate(machines):
-            result['schedule'][machine.user] = [m for m in schedules[i]]
+            result['schedule'][machine.user] = {
+                'prob': int(predict_responsible_prob[users_index[i]] * 100),
+                'time': sum([m['time'] for m in schedules[i]]),
+                'list': [m for m in schedules[i]],
+            }
+
+        result['team_time'] = sum([result['schedule'][k]['time'] for k in result['schedule'].keys()])
+        result['team_prob'] = sum([result['schedule'][k]['prob'] for k in result['schedule'].keys()])
 
         responses.append(result)
 
@@ -129,19 +143,36 @@ def longest_processing_time_first(m_machines=None, n_slots=None, save=False, id=
         # Remove all Slots relations
         [m.slots.clear() for m in m_machines]
 
+
     for i, n_slot in enumerate(n_slots_sorted):
+        for j, m in enumerate(m_machines):
+            if m.user == n_slot.user and n_slot.keep:
+                m_machines_arrays[j][i] = {
+                    'time': int(n_slot.time),
+                    'index': n_slot.index,
+                    'current': n_slot.index == id
+                }
 
-        index_with_lowest_sum = int(np.argmin(np.array([[_m['time'] for _m in m] for m in m_machines_arrays]).sum(axis=1)))
-        m_machines_arrays[index_with_lowest_sum][i] = {
-            'time': int(n_slot.time),
-            'index': n_slot.index,
-            'current': n_slot.index == id
-        }
+                if save:
+                    m_machines[j].slots.add(n_slot)
+                    n_slot.index = i
+                    n_slot.user = n_slot.user
+                    n_slot.save()
 
-        if save:
-            m_machines[index_with_lowest_sum].slots.add(n_slot)
-            n_slot.index = i
-            n_slot.user = m_machines[index_with_lowest_sum].user
-            n_slot.save()
+
+    for i, n_slot in enumerate(n_slots_sorted):
+        if not n_slot.keep:
+            index_with_lowest_sum = int(np.argmin(np.array([[_m['time'] for _m in m] for m in m_machines_arrays]).sum(axis=1)))
+            m_machines_arrays[index_with_lowest_sum][i] = {
+                'time': int(n_slot.time),
+                'index': n_slot.index,
+                'current': n_slot.index == id
+            }
+
+            if save:
+                m_machines[index_with_lowest_sum].slots.add(n_slot)
+                n_slot.index = i
+                n_slot.user = m_machines[index_with_lowest_sum].user
+                n_slot.save()
 
     return [m for m in m_machines_arrays]

@@ -36,7 +36,8 @@ def predict(request):
         id = json.loads(request.body)['params']['id']
         user = json.loads(request.body)['params']['user']
         time = json.loads(request.body)['params']['time']
-        return HttpResponse(setPredict(id, user, time), content_type="application/json")
+        keep = json.loads(request.body)['params']['keep']
+        return HttpResponse(setPredict(id, user, time, keep), content_type="application/json")
 
     return what(request)
 

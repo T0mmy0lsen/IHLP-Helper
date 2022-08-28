@@ -10,9 +10,11 @@ class Boot:
     labels_responsible = None
 
     # path_pickle_time = 'C:/Git/ihlp-helper/backend/predict/data/output/pickle/time/4B0BE2C3'
-    path_pickle_time = 'C:/Git/ihlp-helper/pickle/time/4B0BE2C3'
+    # path_pickle_time = 'C:/Git/ihlp-helper/pickle/time/4B0BE2C3'
+    path_pickle_time = 'C:/Users/tool/git/ihlp-helper/pickle/time/4B0BE2C3'
     # path_pickle_responsible = 'C:/Git/ihlp-helper/backend/predict/data/output/pickle/time/4B0BE2C3'
-    path_pickle_responsible = 'C:/Git/ihlp-helper/pickle/responsible/4B0BE2C3'
+    # path_pickle_responsible = 'C:/Git/ihlp-helper/pickle/responsible/4B0BE2C3'
+    path_pickle_responsible = 'C:/Users/tool/git/ihlp-helper/pickle/responsible/4B0BE2C3'
 
     path_pickle_time_clf = f"{path_pickle_time}/tfidf.pickle"
     path_pickle_time_tfi = f"{path_pickle_time}/clf.pickle"

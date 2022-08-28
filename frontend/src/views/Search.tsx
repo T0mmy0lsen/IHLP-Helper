@@ -31,8 +31,9 @@ export default class Home extends React.Component<any, any> {
         }
     }
 
-    // TODO: Complete visuals
-    // TODO: Choose team or single person
+    // DONE - TODO: Complete visuals
+    // DONE - TODO: Choose team or single person
+    // TODO: Only predict for users that are in teams. Only schedule for users that are in LabelEncoder.
     // TODO: Make reset + boot
     // TODO: Setup with SVM model
 
@@ -50,7 +51,7 @@ export default class Home extends React.Component<any, any> {
             }
             return (
                 <Row style={style}>
-                    <Col span={8} style={{ fontWeight: 700 }}>54%</Col>
+                    <Col span={8} style={{ fontWeight: 700 }}>{ props.args.prob }%</Col>
                     <Col>{props.args.key}</Col>
                 </Row>
             )
@@ -58,7 +59,7 @@ export default class Home extends React.Component<any, any> {
 
         const Expand = (props: any) => {
             console.log(props.args)
-            let [data, setData] = useState(props.args.schedule)
+            let [data, setData] = useState(props.args)
             let style = {
                 background: '#0092ff',
                 height: 24,
@@ -69,7 +70,7 @@ export default class Home extends React.Component<any, any> {
             }
             let styleBtn = {
                 background: 'white',
-                height: 18,
+                height: 24,
                 padding: '0px',
                 paddingLeft: '12px',
                 margin: 2,
@@ -78,37 +79,45 @@ export default class Home extends React.Component<any, any> {
             }
             return (
                 <>
-                    { Object.keys(data).map((key, i) => {
+                    { Object.keys(data.schedule).map((key, i) => {
                         let section = new Section()
                         section.add(new Button()
                             .block()
                             .small()
-                            .component(Label, { key: key })
+                            .component(Label, { key: key, prob: data.schedule[key]['prob'] })
                             .action(new Action()
-                                .callback(() => {})
+                                .callback(() => {
+                                    new Get().target(() => ({
+                                        target: 'predict',
+                                        method: 'post',
+                                        params: {
+                                            id: search._defaultObject.object.id,
+                                            user: key,
+                                            time: data['time'],
+                                            keep: true
+                                        }
+                                    }))
+                                        .onComplete(() => {
+                                            message.success("The choice has been submitted.")
+                                            condition.checkCondition({ value: false, loading: false })
+                                        })
+                                        .get()
+                                })
                             )
                         )
                         return <Row key={i}>
                             <Col span={2} style={styleBtn}>
                                 <SectionComponent key={i} { ... props } model={section}/>
                             </Col>
-                            {  data[key].map((e, j) => {
+                            {  data.schedule[key]['list'].map((e, j) => {
                                 let tmpStyle = { ...style, background: (e.current ? style.background : 'green') }
-                                return <Col key={j} span={e.time} style={tmpStyle}></Col>
+                                return <Col key={j} span={data.schedule[key]['list'][j]['time']} style={tmpStyle}></Col>
                             })}
                         </Row>
                     })}
                 </>
             )
         }
-
-        let schedule = {
-            arg: [{ time: 0 }, { time: 0 }, { time: 2, index: 123, current: false }],
-            der: [{ time: 0 }, { time: 5, index: 123, current: true }, { time: 3, index: 123, current: false }],
-        }
-
-        section.add(new Section().component(Expand, { team: 'Team Awesome', schedule: schedule }))
-        section.add(new Space().top(24))
 
         let condition = new Conditions()
             .default(() => ({ value: undefined, loading: false }))
@@ -131,10 +140,10 @@ export default class Home extends React.Component<any, any> {
                                 })))
                             .footer(false)
                             .headerCreate(false)
-                            .headerPrepend(new ListHeader().key('team').title('Team').searchable())
-                            .headerPrepend(new ListHeader().key('sum').title('Team Sum').sortable())
+                            .headerPrepend(new ListHeader().key('time').title('Team').searchable())
+                            .headerPrepend(new ListHeader().key('team').title('Team Sum').sortable())
                             .headerPrepend(new ListHeader().key('team_prob').title('Team Score').sortable())
-                            .headerPrepend(new ListHeader().key('time').title('Time').sortable())
+                            .headerPrepend(new ListHeader().key('team_time').title('Team Time').sortable())
                             .actions(new Action()
                                 .icon(ArrowRightOutlined)
                                 .callback((args, _) => {
@@ -144,7 +153,8 @@ export default class Home extends React.Component<any, any> {
                                         params: {
                                             id: search._defaultObject.object.id,
                                             user: args.record.user,
-                                            time: args.record.time
+                                            time: args.record.time,
+                                            keep: false
                                         }
                                     }))
                                         .onComplete(() => {
