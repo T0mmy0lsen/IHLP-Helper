@@ -246,7 +246,7 @@ print(tf.sigmoid(bert_raw_result))
 
 # tf.keras.utils.plot_model(classifier_model)
 
-epochs = 5
+epochs = 10
 steps_per_epoch = tf.data.experimental.cardinality(train_ds).numpy()
 num_train_steps = steps_per_epoch * epochs
 num_warmup_steps = int(0.1 * num_train_steps)

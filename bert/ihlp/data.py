@@ -24,7 +24,7 @@ def clean():
     os.mkdir('train/')
 
 
-def make_file(folder, d, translate):
+def make_file(folder, d):
     path = f'{folder}/{d.label}/{d.id}.txt'
     if not os.path.exists(path):
         with open(f'{folder}/{d.label}/{d.id}.txt', 'w') as f:
