@@ -16,8 +16,15 @@ from schedule.parallel_machine_models import setPredict, getPredict
 @csrf_exempt
 def boot(request):
     boot = Boot()
-    boot.create_responsible()
+    boot.users()
     return HttpResponse("{\"message\": \"booted.\"}", content_type="application/json")
+
+@csrf_exempt
+def reboot(request):
+    boot = Boot()
+    boot.reboot()
+    boot.users()
+    return HttpResponse("{\"message\": \"rebooted.\"}", content_type="application/json")
 
 
 @csrf_exempt
@@ -33,11 +40,8 @@ def predict(request):
         return HttpResponse(getPredict(id), content_type="application/json")
 
     if request.method == 'POST':
-        id = json.loads(request.body)['params']['id']
-        user = json.loads(request.body)['params']['user']
-        time = json.loads(request.body)['params']['time']
-        keep = json.loads(request.body)['params']['keep']
-        return HttpResponse(setPredict(id, user, time, keep), content_type="application/json")
+        params = json.loads(request.body)['params']
+        return HttpResponse(setPredict(params), content_type="application/json")
 
     return what(request)
 

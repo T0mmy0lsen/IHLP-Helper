@@ -43,9 +43,9 @@ class Word2Vec(tf.keras.Model):
 
 class WordEmbeddingLoader:
 
-    def __init__(self, shared=None, dim=128):
+    def __init__(self, shared=None, dim=128, output_sequence_length=128):
 
-        vectorizer = tf.keras.layers.TextVectorization(standardize=None, max_tokens=200000, output_sequence_length=128)
+        vectorizer = tf.keras.layers.TextVectorization(standardize=None, max_tokens=200000, output_sequence_length=output_sequence_length)
         text_ds = tf.data.Dataset.from_tensor_slices(np.concatenate((shared.x_train, shared.x_validate))).batch(128)
         vectorizer.adapt(text_ds)
 
@@ -98,6 +98,7 @@ class WordEmbeddingLoader:
         )
 
         shared.set_word_embedding_layer(embedding_layer)
+        shared.set_embedding_matrix(embedding_matrix)
         shared.set_vectorizer(vectorizer)
 
 
@@ -136,7 +137,7 @@ class WordEmbedding:
 
         # Define the vocabulary size and the number of words in a sequence.
         vocab_size = 200000
-        sequence_length = 128
+        sequence_length = 224
 
         # Use the `TextVectorization` layer to normalize, split, and map strings to
         # integers. Set the `output_sequence_length` length to pad all samples to the
@@ -161,7 +162,7 @@ class WordEmbedding:
 
         targets, contexts, labels = self.generate_training_data(
             sequences=sequences,
-            window_size=4,
+            window_size=3,
             num_ns=8,
             vocab_size=vocab_size,
             seed=WordEmbedding.SEED)

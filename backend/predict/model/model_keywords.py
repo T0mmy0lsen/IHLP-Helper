@@ -8,6 +8,7 @@ from sklearn.dummy import DummyClassifier
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.metrics import classification_report, top_k_accuracy_score
 from tqdm import tqdm
 
 
@@ -24,7 +25,7 @@ class ModelKeywords:
             for i in self.shared.categories:
                 data_dict[i] = []
             for idx, el in enumerate(self.shared.x_validate):
-                data_dict[self.shared.y_validate[idx]].append(el)
+                data_dict[self.shared.y_validate[idx][:100]].append(el)
             return data_dict
 
         def get_data_train():
@@ -32,7 +33,7 @@ class ModelKeywords:
             for i in self.shared.categories:
                 data_dict[i] = []
             for idx, el in enumerate(self.shared.x_train):
-                data_dict[self.shared.y_train[idx]].append(el)
+                data_dict[self.shared.y_train[idx][:100]].append(el)
             return data_dict
 
         def get_labels(labels):
@@ -48,7 +49,8 @@ class ModelKeywords:
                 text = " ".join(text_array)
                 word_list = text.split(" ")
                 freq_dist = FreqDist(word_list)
-                vect_dict[topic] = CountVectorizer(vocabulary=[e[0] for e in freq_dist.most_common(200)])
+                # vect_dict[topic] = CountVectorizer(max_df=.9, vocabulary=[e[0] for e in freq_dist.most_common(200)])
+                vect_dict[topic] = CountVectorizer(max_df=.9, vocabulary=[e[0] for e in freq_dist.most_common(1000)])
             return vect_dict
 
         def create_dataset(data_dict, vect_dict, le, sum_list):
@@ -78,14 +80,14 @@ class ModelKeywords:
 
 
         def classify(vector, le):
-            result = np.where(vector == np.amax(vector))
-            label = result[0][0]
-            return [label]
+            result = sorted(range(len(vector)), key=lambda i: vector[i])[-3:]
+            label = [1 if i in result else 0 for i in list(range(len(vector)))]
+            return label
 
         def evaluate(x, y, le):
             y_pred = np.array(list(map(classify, x, repeat(le))))
-            classifier = DummyClassifier()
-            print("Score:", classifier.score(x, y_pred))
+            y_validation = y.flatten()
+            print("[Keywords] Actual Score:", top_k_accuracy_score(y_validation, y_pred, k=3))
             print("")
             # print(classification_report(y, y_pred))
 
@@ -96,9 +98,9 @@ class ModelKeywords:
         vect_dict = create_vectorizers(train_dict)
 
         print("[Keywords] Create Data")
-        le = get_labels(list(vect_dict.keys()))
+        labels = get_labels(list(vect_dict.keys()))
         sum_list = create_dataset_sum_list(validate_dict, vect_dict)
-        x, y = create_dataset(validate_dict, vect_dict, le, sum_list)
+        x, y = create_dataset(validate_dict, vect_dict, labels, sum_list)
 
         print("[Keywords] Predict")
-        evaluate(x, y, le)
+        evaluate(x, y, labels)

@@ -1,4 +1,10 @@
 /frontend/node_modules/
+
 /backend/predict/data
+
+/bert/ihlp
+/bert/ihlp_multi_inputs
+/bert/venv
+
 /venv
 /pickle

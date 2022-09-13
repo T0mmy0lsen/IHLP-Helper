@@ -19,8 +19,11 @@
       <excludeFolder url="file://$MODULE_DIR$/venv" />
       <excludeFolder url="file://$MODULE_DIR$/frontend" />
       <excludeFolder url="file://$MODULE_DIR$/backend/predict/data" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/ppbert" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/predict/input" />
+      <excludeFolder url="file://$MODULE_DIR$/bert/venv" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.8 (ihlp-helper)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.8 (ihlp-helper) (2)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyNamespacePackagesService">

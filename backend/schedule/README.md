@@ -18,3 +18,5 @@ It is to be expected that the system will perform suboptimal in the start becaus
 - Selecting the correct team should not be a problem.
 - If a predicted team-responsible is wrong, then always ask why.
 - If a predicted scheduled responsible is wrong, then always ask why.
+
+- Reducing the amount of wrongly assigned requests.

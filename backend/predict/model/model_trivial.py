@@ -1,35 +1,31 @@
 from collections import Counter
 
+import time
 import numpy as np
-from nltk.probability import FreqDist
+import pickle
+import predict.config as config
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import classification_report, top_k_accuracy_score
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn import preprocessing
+from sklearn.model_selection import cross_val_predict
+from sklearn.model_selection import StratifiedKFold
+from sklearn.metrics import log_loss, accuracy_score
+from sklearn.linear_model import LogisticRegression
+from xgboost import XGBClassifier
+from sklearn import svm
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.ensemble import AdaBoostClassifier
 
 
 class ModelTrivial:
 
-    def __init__(self, shared):
+    def __init__(self, shared, category_type):
+        self.category_type = category_type
         self.shared = shared
         self.run()
 
     def run(self):
-
-        def sort_index(lst, rev=True):
-            index = range(len(lst))
-            s = sorted(index, reverse=rev, key=lambda i: lst[i])
-            return s
-
-        def predict_trivial(x_train, y_train, x_validate, y_validate, le, constant=False):
-            if constant:
-                dummy_clf = DummyClassifier(constant=y_validate)
-            else:
-                dummy_clf = DummyClassifier(strategy='prior')
-            dummy_clf.fit(x_train, y_train)
-
-            probs = dummy_clf.predict_proba(x_validate)
-            print("[Trivial] Actual Score:", top_k_accuracy_score(y_validate, probs, k=3))
 
         def tokenize_and_stem(sentence):
             return sentence.split(" ")
@@ -42,7 +38,7 @@ class ModelTrivial:
                 stop_words=None,
                 use_idf=True,
                 tokenizer=tokenize_and_stem,
-                ngram_range=(1, 3)
+                ngram_range=(1, 5)
             )
             tfidf_vectorizer.fit_transform(self.shared.x_train)
             return tfidf_vectorizer
@@ -57,19 +53,26 @@ class ModelTrivial:
             labels = le.transform(y)
             return vectors, labels
 
+        def evaluate(X, y, X_v, y_v, name, clf=None):
 
-        # data_dict = get_data()
-        # get_stats(data_dict)
+            # Train the model
+            tic = time.perf_counter()
+            clf = clf.fit(X, y)
+            toc = time.perf_counter()
+            print(f"Done in {toc - tic:0.4f} seconds")
 
-        c = Counter(self.shared.y_train)
-        most_common = [e[0] for e in c.most_common(3)]
-        most_common_count = len([e for e in self.shared.y_train if e in most_common])
-        score_expected_train = most_common_count / len(self.shared.y_train)
+            # Save the model
+            path_pickle = f"{config.BASE_PATH}/data/output/pickle/{self.category_type}/{self.shared.hashed}"
+            path_pickle_clf = f"{path_pickle}/{name}_tfidf.pickle"
+            pickle.dump(clf, open(path_pickle_clf, "wb"))
 
-        c = Counter(self.shared.y_validate)
-        most_common = [e[0] for e in c.most_common(3)]
-        most_common_count = len([e for e in self.shared.y_validate if e in most_common])
-        score_expected_validate = most_common_count / len(self.shared.y_validate)
+            # We may find classes in the validation set that we did not find in the training set.
+            indexes = [i for i, e in enumerate(y_v) if e not in clf.classes_]
+            x_validate = np.delete(X_v, indexes, axis=0)
+            y_validate = np.delete(y_v, indexes, axis=0)
+            probs = clf.predict_proba(x_validate)
+            print(f"[{name}] Score:", top_k_accuracy_score(y_validate, probs, k=3, labels=clf.classes_))
+            print(f"[{name}] Score:", top_k_accuracy_score(y_validate, probs, k=1, labels=clf.classes_))
 
         print("[Trivial] Create Vectorizer")
         tfidf_vec = create_vectorizer()
@@ -79,8 +82,9 @@ class ModelTrivial:
         x_train, y_train = create_dataset(self.shared.x_train, self.shared.y_train, tfidf_vec, le)
         x_validate, y_validate = create_dataset(self.shared.x_validate, self.shared.y_validate, tfidf_vec, le)
 
-        print("[Trivial] Predict by Highest Occurence")
-        predict_trivial(x_train, y_train, x_validate, y_validate, le)
-
-        print("[Trivial] Expected Score Train:", score_expected_train)
-        print("[Trivial] Expected Score Validate:", score_expected_validate)
+        evaluate(x_train, y_train, x_validate, y_validate, 'dum', clf=DummyClassifier(strategy='prior'))
+        evaluate(x_train, y_train, x_validate, y_validate, 'log', clf=LogisticRegression())
+        evaluate(x_train, y_train, x_validate, y_validate, 'xgb', clf=XGBClassifier())
+        evaluate(x_train, y_train, x_validate, y_validate, 'ada', clf=AdaBoostClassifier())
+        evaluate(x_train, y_train, x_validate, y_validate, 'mnb', clf=MultinomialNB())
+        # evaluate(x_train, y_train, x_validate, y_validate, 'svm', clf=svm.SVC(probability=True))

@@ -9,42 +9,44 @@ from tqdm import tqdm
 class ModelCNN:
 
     def __init__(self, shared):
+        self.shared = shared
         if shared.model == 1:
             self.model_01(shared)
+
+    @staticmethod
+    def bulk_vectorize(shared, data, size=1000):
+        output = None
+        prev_i = 0
+        for i, s in enumerate(tqdm(data)):
+            if i > 0 and i % size == 0:
+                # part_output = shared.vectorizer(np.array([[s] for s in data[prev_i:i]])).numpy()
+                part_output = shared.vectorizer(data[prev_i:i])
+                if output is None:
+                    output = part_output[:]
+                else:
+                    output = np.vstack((output, part_output))
+                prev_i = i
+        # part_output = shared.vectorizer(np.array([[s] for s in data[prev_i:]])).numpy()
+        part_output = shared.vectorizer(data[prev_i:])
+        if output is None:
+            output = part_output[:]
+        else:
+            output = np.vstack((output, part_output))
+        return output
 
 
     def model_01(self, shared):
 
-        def bulk_vectorize(data, size=5000):
-            output = None
-            prev_i = 0
-            for i, s in enumerate(tqdm(data)):
-                if i > 0 and i % size == 0:
-                    # part_output = shared.vectorizer(np.array([[s] for s in data[prev_i:i]])).numpy()
-                    part_output = shared.vectorizer(data[prev_i:i])
-                    if output is None:
-                        output = part_output[:]
-                    else:
-                        output = np.vstack((output, part_output))
-                    prev_i = i
-            # part_output = shared.vectorizer(np.array([[s] for s in data[prev_i:]])).numpy()
-            part_output = shared.vectorizer(data[prev_i:])
-            if output is None:
-                output = part_output[:]
-            else:
-                output = np.vstack((output, part_output))
-            return output
-
         # Use wordembedding
-        # """
+        """
         layer_first = tf.keras.Input(shape=(None,), dtype="int64")
         layer_model_build = shared.layer(layer_first)
-        # """
+        """
 
         # Use tfidf
         #
-        """"
-        tfidf_vectorizer = TfidfVectorizer(max_df=.9, max_features=1536, min_df=0.01, ngram_range=(1, 5))
+        # """"
+        tfidf_vectorizer = TfidfVectorizer(max_df=.9, max_features=3200, min_df=0, ngram_range=(1, 5))
         tfidf_vectorizer.fit_transform(shared.x_train)
         tf_len = len(tfidf_vectorizer.vocabulary_)
         print(tf_len)
@@ -56,7 +58,7 @@ class ModelCNN:
             return tfidf_vectorizer.transform(data).todense()
 
         shared.vectorizer = vectorizer
-        """
+        # """
 
         """
         lx = layers.Conv1D(filters=32, kernel_size=4, padding='same', activation='relu')(embedded_sequences)
@@ -132,8 +134,8 @@ class ModelCNN:
         model = tf.keras.Model(layer_first, preds)
         # model.summary()
 
-        x_train = bulk_vectorize(shared.x_train)
-        x_val = bulk_vectorize(shared.x_validate)
+        x_train = self.bulk_vectorize(shared, shared.x_train)
+        x_val = self.bulk_vectorize(shared, shared.x_validate)
 
         y_train = np.array(shared.y_train)
         y_val = np.array(shared.y_validate)

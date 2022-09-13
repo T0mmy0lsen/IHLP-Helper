@@ -2,15 +2,18 @@ import csv
 import os
 import shutil
 import warnings
+import swifter
 
 import lemmy as lemmy
 import pandas as pd
+import numpy as np
 from nltk import SnowballStemmer
 
 from danlp.models import load_spacy_model
 
 import re
 
+from numpy import loadtxt
 from tqdm import tqdm
 from bs4 import BeautifulSoup
 
@@ -33,6 +36,7 @@ class Preprocess:
         self.nlp = load_spacy_model()
         self.stemmer = SnowballStemmer('danish')
         self.lemmatizer = lemmy.load('da')
+        self.word_list = loadtxt(f'{config.BASE_PATH}/data/input/danish-words.txt', dtype=str)
 
         if not self.for_predict:
 
@@ -45,7 +49,7 @@ class Preprocess:
 
             if not self.shared.exists:
                 self.dfs = [
-                    pd.read_csv(config.PATH_INPUT_COMMUNICATION, nrows=self.shared.nrows),
+                    # pd.read_csv(config.PATH_INPUT_COMMUNICATION, nrows=self.shared.nrows),
                     pd.read_csv(config.PATH_INPUT_REQUEST, nrows=self.shared.nrows)
                 ]
                 for idx, df in enumerate(self.dfs):
@@ -81,6 +85,9 @@ class Preprocess:
                 if self.shared.remove_special_chars:
                     self.remove_special_chars(df, idx)
 
+                if self.shared.remove_unknown_words:
+                    self.remove_unknown_words(df, idx)
+
                 self.remove_extra_spaces(df, idx)
 
         if not self.for_predict:
@@ -99,8 +106,8 @@ class Preprocess:
             f.close()
 
     @staticmethod
-    def get_lemmatize(line, nlp, lemmatizer):
-        doc = nlp(line)
+    def get_lemmatize(x, nlp, lemmatizer):
+        doc = nlp(x)
         texts = []
         skip = False
         for idx, tok in enumerate(doc):
@@ -127,10 +134,14 @@ class Preprocess:
         return " ".join(texts)
 
     def lemmatize(self, df, index):
-        if self.for_predict:
+        df[index] = df[index].swifter.apply(Preprocess.get_lemmatize, nlp=self.nlp, lemmatizer=self.lemmatizer)
+        """
+                if self.for_predict:
             df[index] = df.apply(lambda x: Preprocess.get_lemmatize(x[index], self.nlp, self.lemmatizer), axis=1)
         else:
             df[index] = df.progress_apply(lambda x: Preprocess.get_lemmatize(x[index], self.nlp, self.lemmatizer), axis=1)
+        """
+
 
     @staticmethod
     def get_stemmer(line, stemmer):
@@ -144,16 +155,20 @@ class Preprocess:
             df[index] = df.progress_apply(lambda x: Preprocess.get_stemmer(x[index], self.stemmer), axis=1)
 
     @staticmethod
-    def get_remove_html_tags(line):
-        text = BeautifulSoup(line, "lxml").text
+    def get_remove_html_tags(x):
+        text = BeautifulSoup(x, "lxml").text
         text = text.replace(u'\u00A0', ' ')
         return text
 
     def remove_html_tags(self, df, index):
+        df[index] = df[index].swifter.apply(Preprocess.get_remove_html_tags)
+        """
         if self.for_predict:
             df[index] = df.apply(lambda x: Preprocess.get_remove_html_tags(x[index]), axis=1)
         else:
             df[index] = df.progress_apply(lambda x: Preprocess.get_remove_html_tags(x[index]), axis=1)
+
+        """
 
     @staticmethod
     def get_replace_match(line, regex_dict):
@@ -177,10 +192,13 @@ class Preprocess:
         return text
 
     def remove_stopwords(self, df, index, shared):
+        df[index] = df.swifter.apply(lambda x: Preprocess.get_remove_stopwords(x[index], shared.stopwords), axis=1)
+        """
         if self.for_predict:
             df[index] = df.apply(lambda x: Preprocess.get_remove_stopwords(x[index], shared.stopwords), axis=1)
         else:
             df[index] = df.progress_apply(lambda x: Preprocess.get_remove_stopwords(x[index], shared.stopwords), axis=1)
+        """
 
     @staticmethod
     def get_remove_special_chars(text):
@@ -205,3 +223,17 @@ class Preprocess:
             df[index] = df.apply(lambda x: Preprocess.get_remove_extra_spaces(x[index]), axis=1)
         else:
             df[index] = df.progress_apply(lambda x: Preprocess.get_remove_extra_spaces(x[index]), axis=1)
+
+    @staticmethod
+    def get_remove_unknown_words(x, bad_words):
+        text = " ".join([e for e in x.split(" ") if e.lower() not in bad_words])
+        return text
+
+    def remove_unknown_words(self, df, index):
+        words_dictionary = [e.lower() for e in self.word_list]
+        lines = df[index].to_numpy()
+        words = np.concatenate([[g.lower() for g in e.split(" ")] for e in lines])
+        words = np.unique(words)
+        bad_words = [e for e in words if e not in words_dictionary]
+        df[index] = df[index].swifter.apply(Preprocess.get_remove_unknown_words, bad_words=bad_words)
+        # df[index] = df.progress_apply(lambda x: Preprocess.get_remove_unknown_words(x[index], self.word_list), axis=1)

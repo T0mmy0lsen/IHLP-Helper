@@ -145,4 +145,4 @@ CORS_ORIGIN_WHITELIST = [
      'http://localhost:3002',
 ]
 
-BOOT = Boot()
+BOOT = Boot(debug=False)

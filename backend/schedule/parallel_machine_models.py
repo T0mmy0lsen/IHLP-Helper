@@ -1,23 +1,27 @@
 import numpy as np
 import json
-import pickle
-from django.forms import model_to_dict
 
 from sklearn import preprocessing
 from app.settings import BOOT
-from ihlp.model.svm import SVM
-from ihlp.models import Schedule, Machine, Slot, Predict
+
+from ihlp.models import Schedule, Machine, Slot
 from ihlp.models_ihlp import Request
 
 
-def setPredict(id=None, user=None, time=None, keep=None):
+def setPredict(params=None):
 
-    machine = Machine.objects.filter(user=user).first()
-    schedule = machine.schedule_set.first()
+    if not params['team_id']:
+        machine = Machine.objects.filter(user=params['user']).first()
+        schedule = machine.schedule_set.first()
+    else:
+        schedule = Schedule.objects.filter(id=params['team_id']).first()
+
     machines = schedule.machines.all()
 
     # Get all existing slots from the Schedule and add the new slot.
-    s = Slot.objects.create(user=user, time=time, index=0, keep=keep)
+    if params['user'] is False:
+        params['user'] = '-'
+    s = Slot.objects.create(user=params['user'], time=params['time'], index=params['id'], keep=params['keep'])
 
     slots = np.concatenate([list(m.slots.all()) for m in machines])
     slots = np.concatenate((slots, [s]))
@@ -27,7 +31,7 @@ def setPredict(id=None, user=None, time=None, keep=None):
 
 def getPredict(id=None):
 
-    # Fist we predict time and responsible
+    # Fist we predict time and user
 
     if id is None:
         id = 3710881
@@ -36,26 +40,16 @@ def getPredict(id=None):
     text = request.description
 
     if BOOT is not None and BOOT.svm_loaded:
-        # To sync Machines with the model, run boot.create_responsible()
-        predict_time_prob = BOOT.svm_time.predict(text)
-        predict_responsible_prob = BOOT.svm_responsible.predict(text)
+        # To sync Machines with the model, run boot.users()
+        predict_time_prob = BOOT.svm_time.predict(text)[0]
+        predict_user_prob = BOOT.svm_user.predict(text)[0]
     elif BOOT is not None:
         # For debug purposes
+        # The labels for both time and users dictates what time and users we can use for the Slots
+        # We may predict users that are not eligible, i.e. users that do not belong to a team.
+        # We find teams with users that does not a probability score (because they are not in the model)
         predict_time_prob = [.1, .2, .4, .2, .1]
-        predict_responsible_prob = np.random.random(size=9)
-    else:
-        return None
-
-
-
-    predict_time_indexes = np.argpartition(predict_time_prob, -3)[-3:]
-    predict_time_indexes = [int(t) for t in predict_time_indexes]
-    predict_responsible_indexes = np.argpartition(predict_responsible_prob, -3)[-3:]
-    predict_responsible_indexes = [int(t) for t in predict_responsible_indexes]
-
-    """
-     if BOOT is not None and not BOOT.svm_loaded:
-        # For debug purposes
+        predict_user_prob = np.random.random(size=9)
         BOOT.label_encoder_time = preprocessing.LabelEncoder()
         BOOT.label_encoder_time.fit([1, 2, 3, 4, 5])
         BOOT.label_encoder_responsible = preprocessing.LabelEncoder()
@@ -70,60 +64,67 @@ def getPredict(id=None):
             'afredsl',
             'agd',
         ])
-    """
+    else:
+        return None
 
-    avaliable_users = []
+
+    # We find the top 3 users and time that has been predicted.
+    # We get the indexes, s.t. we can use the label encoder to find the actual time and usernames
+
+    predict_time_indexes = np.argpartition(predict_time_prob, -3)[-3:]
+    predict_time_indexes = [int(t) for t in predict_time_indexes]
+
+    predict_user_indexes = np.argpartition(predict_user_prob, -3)[-3:]
+    predict_user_indexes = [int(t) for t in predict_user_indexes]
 
     labels_time = BOOT.label_encoder_time.inverse_transform(predict_time_indexes)
-    labels_responsible = BOOT.label_encoder_responsible.inverse_transform(predict_responsible_indexes)
+    labels_user = BOOT.label_encoder_responsible.inverse_transform(predict_user_indexes)
 
-    # The user selects a responsible, which maps to a machine.
+    # We find all users, aka. Machines, in our database
+    machines = Machine.objects.filter(user__in=labels_user).all()
+
     responses = []
-    for responsible in labels_responsible:
+    for machine in machines:
 
-        # predict = Predict.objects.create(time=predict_time, responsible=predict_responsible)
-        # predict.save()
-
-        user = responsible.lower()
-        machine = Machine.objects.filter(user=user).first()
-
-        if machine is None:
-            responses.append({
-                "error": f"User \'{user}\' not found in Machines"
-            })
+        # Find the team, aka. Schedule, of the user and the rest of the users of that team.
+        team_schedule = machine.schedule_set.first()
+        if team_schedule is None:
+            print(f'User: {machine.user} not in a team.')
             continue
 
-        schedule = machine.schedule_set.first()
-        machines = schedule.machines.all()
+        team_machines = team_schedule.machines.all()
     
-        # Get all existing slots from the Schedule and add the new slot.
-        # s = Slot.objects.create(user=user, time=labels_time[0], index=id)
-        s = Slot.objects.create(user=user, time=1, index=id, keep=False)
+        # Get all existing Slots from the Schedule and add the new slot.
+        # We set the time to 1 for debugging purposes, else it should be = labels_time[0]
+        s = Slot(user=None, time=labels_time[0], index=id, keep=False)
 
-        slots = np.concatenate([list(m.slots.all()) for m in machines])
+        slots = np.concatenate([list(m.slots.all()) for m in team_machines])
         slots = np.concatenate((slots, [s]))
 
-        schedules = list(longest_processing_time_first(machines, slots, id=id))
-        # team_users = [m.user for m in machines if m.user in BOOT.label_encoder_responsible.classes_]
-        # team_indexes = BOOT.label_encoder_responsible.transform(team_users)
+        # Schedule all the slots using the new slot.
+        schedules = list(longest_processing_time_first(team_machines, slots, id=id))
 
-        result = {
-            "time": 1,  # int(labels_time[0]),
-            "team": schedule.name,
-            "user": user,
+        result = dict({
+            "time": int(s.time),
+            "team": team_schedule.name,
+            "team_id": team_schedule.id,
             "team_time": 0,
             "team_prob": 0,
             "schedule": {}
-        }
+        })
 
-        users = [m.user for m in machines]
+        # We get the indexes for the users, s.t. we can find their probability.
+        # We need this to evaluate the whole team.
+
+        users = [m.user for m in team_machines]
         users_index = BOOT.label_encoder_responsible.transform(users)
+        users_probs = predict_user_prob[users_index]
 
-        for i, machine in enumerate(machines):
-            result['schedule'][machine.user] = {
-                'prob': int(predict_responsible_prob[users_index[i]] * 100),
-                'time': sum([m['time'] for m in schedules[i]]),
-                'list': [m for m in schedules[i]],
+        for i, team_machine in enumerate(team_machines):
+            result['schedule'][team_machine.user] = {
+                'prob': int(users_probs[i] * 100),
+                'time': sum([s['time'] for s in schedules[i]]),
+                'list': [s for s in schedules[i]],
             }
 
         result['team_time'] = sum([result['schedule'][k]['time'] for k in result['schedule'].keys()])

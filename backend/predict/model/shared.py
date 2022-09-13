@@ -2,6 +2,7 @@ import hashlib
 import json
 import os
 import re
+import numpy as np
 
 from predict import config
 
@@ -66,9 +67,67 @@ class SharedDict:
             }
         )
 
+    def revised(self):
+
+        return Shared(
+            model=1,
+            word_embedding_dim=128,
+            word_embedding_epochs=50,
+            nrows=None,
+            stemming=True,
+            lemmatize=True,
+            stopwords_path=f"{config.BASE_PATH}/data/input/stopwords.txt",
+            remove_unknown_words=False,
+            replace_match_regex={
+                ' ': [
+                    re.compile(r'[^a-åA-Å]+', flags=re.MULTILINE)
+                ],
+            }
+        )
+
+    def revised_no_stem(self):
+
+        return Shared(
+            model=1,
+            word_embedding_dim=128,
+            word_embedding_epochs=50,
+            nrows=None,
+            stemming=False,
+            lemmatize=True,
+            stopwords_path=f"{config.BASE_PATH}/data/input/stopwords.txt",
+            remove_unknown_words=False,
+            replace_match_regex={
+                ' ': [
+                    re.compile(r'[^a-åA-Å]+', flags=re.MULTILINE)
+                ],
+            }
+        )
+
+    def clean(self):
+
+        return Shared(
+            model=1,
+            word_embedding_dim=128,
+            word_embedding_epochs=50,
+            nrows=None,
+            stemming=False,
+            lemmatize=False,
+            stopwords_path=None,
+            remove_unknown_words=False,
+            replace_match_regex={
+                '.': [
+                    re.compile(r'[?!]', flags=re.MULTILINE),
+                ],
+                ' ': [
+                    re.compile(r'\t|\n|>|<|_|\.\s+', flags=re.MULTILINE)
+                ],
+            }
+        )
+
 
 class Shared:
 
+    embedding_matrix = None
     vectorizer = None
     layer = None
     exists = None
@@ -83,6 +142,7 @@ class Shared:
     word_embedding_dim = None
     word_embedding_epochs = None
     remove_special_chars = None
+    remove_unknown_words = None
 
     x_train = None
     y_train = None
@@ -90,12 +150,22 @@ class Shared:
     y_validate = None
     categories = None
 
+    words_count = None
+    lookup = None
+    vocab = None
+
     folder = f'{config.BASE_PATH}/data/output/preprocess'
 
-    dfs_names = ['communication', 'request']
+    dfs_names = [
+        # 'communication',
+        'request']
     dfs_index = [
-        ['subject', 'message'],
-        ['subject', 'solution', 'description']
+        # ['subject', 'message'],
+        [
+            'subject',
+            # 'solution',
+            'description'
+        ]
     ]
     dfs_names_train = 'request'
     dfs_index_train = ['subject', 'description']
@@ -109,7 +179,9 @@ class Shared:
                  word_embedding_epochs,
                  word_embedding_dim,
                  stopwords_path=None,
-                 remove_special_chars=True):
+                 remove_special_chars=True,
+                 remove_unknown_words=False,
+                 ):
         self.model = model
         self.nrows = nrows
         self.stemming = stemming
@@ -118,6 +190,7 @@ class Shared:
         self.remove_special_chars = remove_special_chars
         self.word_embedding_dim = word_embedding_dim
         self.word_embedding_epochs = word_embedding_epochs
+        self.remove_unknown_words = remove_unknown_words
 
         if stopwords_path is not None:
             with open(f"{config.BASE_PATH}/data/input/stopwords.txt") as f:
@@ -126,8 +199,15 @@ class Shared:
         # Hash the config and check if there is a folder with the same config
         self.set_hash()
 
+    def invert_multi_hot(self, encoded_labels):
+        hot_indices = np.argwhere(encoded_labels == 1.0)[..., 0]
+        return np.take(self.vocab, hot_indices)
+
     def set_vectorizer(self, vectorizer):
         self.vectorizer = vectorizer
+
+    def set_embedding_matrix(self, embedding_matrix):
+        self.embedding_matrix = embedding_matrix
 
     def set_word_embedding_layer(self, layer):
         self.layer = layer
@@ -156,5 +236,6 @@ class Shared:
             'remove_special_chars': self.remove_special_chars,
             'replace_match_regex': extract_regex(self.replace_match_regex),
             'word_embedding_dim': self.word_embedding_dim,
-            'word_embedding_epochs': self.word_embedding_epochs
+            'word_embedding_epochs': self.word_embedding_epochs,
+            'remove_unknown_words': self.remove_unknown_words,
         })

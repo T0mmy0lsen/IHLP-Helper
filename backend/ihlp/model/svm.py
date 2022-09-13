@@ -44,6 +44,8 @@ class SVM:
         with open(path_pickle_le, 'rb') as pickle_file:
             self.le = pickle.load(pickle_file)
 
+        return self
+
 
     def evaluate(self):
 
@@ -70,10 +72,8 @@ class SVM:
 
         vector = self.vec.transform(self.preprocess.dfs[0]['text'].to_numpy()).todense()
         probs = self.clf.predict_proba(vector)
-        top_3 = np.argpartition(probs[0], -3)[-3:]
-        labels = [str(e).lower() for e in self.le.classes_[top_3]]
 
         end = time.time()
         print(end - start)
 
-        return labels
+        return probs
