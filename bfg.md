@@ -1,0 +1,1 @@
+java -jar bfg.jar --delete-files *.csv
