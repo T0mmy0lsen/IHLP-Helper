@@ -14,5 +14,9 @@
 /backend/pipeline/models/notebooks/predict
 /backend/pipeline/models/notebooks/weights
 
+/backend/pipeline/models/cache
+/backend/pipeline/models/logs
+/backend/pipeline/models/data
+
 /backend/predict
 
