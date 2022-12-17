@@ -1,19 +1,15 @@
-from collections import Counter
+
 
 import time
 import numpy as np
 import pickle
 import predict.config as config
 from sklearn.dummy import DummyClassifier
-from sklearn.metrics import classification_report, top_k_accuracy_score
+from sklearn.metrics import top_k_accuracy_score
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn import preprocessing
-from sklearn.model_selection import cross_val_predict
-from sklearn.model_selection import StratifiedKFold
-from sklearn.metrics import log_loss, accuracy_score
 from sklearn.linear_model import LogisticRegression
 from xgboost import XGBClassifier
-from sklearn import svm
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.ensemble import AdaBoostClassifier
 
@@ -87,4 +83,4 @@ class ModelTrivial:
         evaluate(x_train, y_train, x_validate, y_validate, 'xgb', clf=XGBClassifier())
         evaluate(x_train, y_train, x_validate, y_validate, 'ada', clf=AdaBoostClassifier())
         evaluate(x_train, y_train, x_validate, y_validate, 'mnb', clf=MultinomialNB())
-        # evaluate(x_train, y_train, x_validate, y_validate, 'svm', clf=svm.SVC(probability=True))
+        evaluate(x_train, y_train, x_validate, y_validate, 'svm', clf=svm.SVC(probability=True))

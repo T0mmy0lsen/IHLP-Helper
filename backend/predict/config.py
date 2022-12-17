@@ -6,7 +6,7 @@ import warnings
 warnings.warn = warn
 
 
-# A guide for installing tensorflow is always helpful
+# A guide for installing tensorboard is always helpful
 # https://towardsdatascience.com/the-ultimate-tensorflow-gpu-installation-guide-for-2022-and-beyond-27a88f5e6c6e
 
 # Because direct paths are always better

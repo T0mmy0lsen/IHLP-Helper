@@ -14,3 +14,6 @@ The following folders are needed
 
 ## (1) Main
 The models are created by running `main.py`. This runs the function `run()`.
+
+## Tensorboard
+`tensorboard --logdir models/logs/tensorboard`

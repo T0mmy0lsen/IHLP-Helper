@@ -273,7 +273,11 @@ class Prepare:
 
         df_rh = df_rh.sort_values(by='tblTimeStamp')
         df_oh = df_oh[df_oh['name'].isin(
-            ['RequestServiceResponsible', 'RequestIncidentResponsible', 'RequestServiceReceivedBy', 'RequestIncidentReceivedBy']
+            [
+                'RequestServiceResponsible', 'RequestIncidentResponsible',
+                'RequestServiceReceivedBy', 'RequestIncidentReceivedBy',
+                'RequestServiceUser', 'RequestIncidentUser',
+            ]
         )]
 
         df_rh_tmp = df_rh.drop_duplicates(subset=['leftId'], keep='first')

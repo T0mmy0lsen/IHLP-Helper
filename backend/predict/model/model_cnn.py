@@ -38,14 +38,14 @@ class ModelCNN:
     def model_01(self, shared):
 
         # Use wordembedding
-        """
+        # """
         layer_first = tf.keras.Input(shape=(None,), dtype="int64")
         layer_model_build = shared.layer(layer_first)
-        """
+        # """
 
         # Use tfidf
         #
-        # """"
+        """"
         tfidf_vectorizer = TfidfVectorizer(max_df=.9, max_features=3200, min_df=0, ngram_range=(1, 5))
         tfidf_vectorizer.fit_transform(shared.x_train)
         tf_len = len(tfidf_vectorizer.vocabulary_)
@@ -58,7 +58,7 @@ class ModelCNN:
             return tfidf_vectorizer.transform(data).todense()
 
         shared.vectorizer = vectorizer
-        # """
+        """
 
         """
         lx = layers.Conv1D(filters=32, kernel_size=4, padding='same', activation='relu')(embedded_sequences)

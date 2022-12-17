@@ -1,10 +1,18 @@
 /frontend/node_modules/
+/frontend/.idea/
 
-/backend/predict/data
+/backend/notebooks/data
+/backend/notebooks/evaluate
 
-/bert/ihlp
-/bert/ihlp_multi_inputs
-/bert/venv
+/backend/pipeline/data/input
+/backend/pipeline/data/output
 
-/venv
-/pickle
+/backend/pipeline/models/notebooks/cache
+/backend/pipeline/models/notebooks/data
+/backend/pipeline/models/notebooks/logs
+/backend/pipeline/models/notebooks/models
+/backend/pipeline/models/notebooks/predict
+/backend/pipeline/models/notebooks/weights
+
+/backend/predict
+
