@@ -7,16 +7,16 @@
 /backend/pipeline/data/input
 /backend/pipeline/data/output
 
-/backend/pipeline/models/notebooks/cache
-/backend/pipeline/models/notebooks/data
-/backend/pipeline/models/notebooks/logs
-/backend/pipeline/models/notebooks/models
-/backend/pipeline/models/notebooks/predict
-/backend/pipeline/models/notebooks/weights
+/backend/saved/pipeline/models/notebooks/cache
+/backend/saved/pipeline/models/notebooks/data
+/backend/saved/pipeline/models/notebooks/logs
+/backend/saved/pipeline/models/notebooks/models
+/backend/saved/pipeline/models/notebooks/predict
+/backend/saved/pipeline/models/notebooks/weights
 
-/backend/pipeline/models/cache
-/backend/pipeline/models/logs
-/backend/pipeline/models/data
+/backend/saved/pipeline/models/cache
+/backend/saved/pipeline/models/logs
+/backend/saved/pipeline/models/data
 
-/backend/predict
+/backend/predict/data
 
