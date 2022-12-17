@@ -18,10 +18,10 @@
       <excludeFolder url="file://$MODULE_DIR$/.idea" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
       <excludeFolder url="file://$MODULE_DIR$/frontend" />
-      <excludeFolder url="file://$MODULE_DIR$/backend/predict/data" />
       <excludeFolder url="file://$MODULE_DIR$/backend/ppbert" />
-      <excludeFolder url="file://$MODULE_DIR$/backend/predict/input" />
       <excludeFolder url="file://$MODULE_DIR$/bert/venv" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/saved/predict/data" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/saved/predict/input" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.8 (ihlp-helper) (2)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
@@ -31,9 +31,9 @@
       <list>
         <option value="$MODULE_DIR$/backend/app" />
         <option value="$MODULE_DIR$/backend/ihlp" />
-        <option value="$MODULE_DIR$/backend/predict" />
-        <option value="$MODULE_DIR$/backend/schedule" />
-        <option value="$MODULE_DIR$/backend/predict/model" />
+        <option value="$MODULE_DIR$/backend/saved/predict" />
+        <option value="$MODULE_DIR$/backend/saved/schedule" />
+        <option value="$MODULE_DIR$/backend/saved/predict/model" />
       </list>
     </option>
   </component>

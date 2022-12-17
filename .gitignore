@@ -4,8 +4,8 @@
 /backend/notebooks/data
 /backend/notebooks/evaluate
 
-/backend/pipeline/data/input
-/backend/pipeline/data/output
+/backend/saved/pipeline/data/input
+/backend/saved/pipeline/data/output
 
 /backend/saved/pipeline/models/notebooks/cache
 /backend/saved/pipeline/models/notebooks/data
