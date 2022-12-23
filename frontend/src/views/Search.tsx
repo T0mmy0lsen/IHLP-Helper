@@ -12,12 +12,12 @@ import {
     List,
     Post,
     Get, Main, ListItem,
-    Autocomplete, Conditions, ConditionsItem, Item
+    Autocomplete, Conditions, ConditionsItem, Item, Search, Input
 } from 'react-antd-admin-panel/dist';
 
 import {SectionComponent} from 'react-antd-admin-panel/dist';
 
-import {Col, message, Row} from "antd";
+import {Col, DatePicker, message, Row} from "antd";
 import {ArrowRightOutlined} from "@ant-design/icons";
 import { useState } from "react";
 
@@ -27,6 +27,8 @@ export default class Home extends React.Component<any, any> {
         super(props);
         this.state = {
             section: false,
+            time: false,
+            text: false,
             id: false,
         }
     }
@@ -39,22 +41,24 @@ export default class Home extends React.Component<any, any> {
 
     build() {
 
-        const getSearch = () => new Autocomplete()
-            .key('requestId')
-            .label('Find a request')
-            .clearable(false)
-            .get((value) => new Get()
-                .target(() => ({
-                    target: `/request`,
-                    params: {
-                        text: value
-                    }
-                }))
-                .alter((v: any) => v
-                    .map((r: any) => new Item(r.id).id(r.id).title(r.subject).text(r.description).object(r))
-                )
-            )
-            .onChange((v: any) => {
+        const getSearch = () => new Input()
+            .onChange((v) => this.setState({ text: v }))
+            .onPressEnter(() => {
+                let get = new Get()
+                    .target(() => ({
+                        target: `/request`,
+                        params: {
+                            text: this.state.text,
+                            time: this.state.time ? this.state.time.format('YYYY-MM-DD HH:MM:ss') : false
+                        }
+                    }))
+                    .alter((v: any) => v.data
+                        .map((r: any) => new Item(r.id).id(r.id).title(r.subject).text(r.description).object(r))
+                    )
+                get.get()
+            })
+            .onComplete((v: any) => {
+                console.log(v)
                 if (v.value) {
                     condition.checkCondition({ value: v.object.id, loading: false })
                 }
@@ -108,6 +112,17 @@ export default class Home extends React.Component<any, any> {
         const main: Main = this.props.main;
         const search = getSearch();
         const section = new Section();
+
+        const Time = () => {
+
+            const onOk = (value) => {
+                this.setState({ time: value })
+            };
+
+            return (
+                <DatePicker showTime onOk={onOk} />
+            )
+        }
 
         const Label = (props: any) => {
             let style = {
@@ -206,6 +221,7 @@ export default class Home extends React.Component<any, any> {
 
         section.style({ padding: '24px 36px' });
         section.add(new Title().label('Search for a Request').level(1));
+        section.add(new Section().component(Time, false))
         section.add(new Space().top(24));
         section.add(search);
         section.add(condition);

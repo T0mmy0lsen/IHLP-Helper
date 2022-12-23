@@ -1,5 +1,5 @@
 import json
-from collections import Iterable
+from collections.abc import Iterable
 
 from django.forms import model_to_dict
 

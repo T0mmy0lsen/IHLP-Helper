@@ -27,9 +27,15 @@ python -m pip install scikit-learn
 python -m pip install django-cors-headers
 python -m pip install djangorestframework
 python -m pip install mysqlclient
+python -m pip install jsonfield
 
 python ./manage.py runserver 0.0.0.0:8000
 ````
+### Load the data locally
+Place the data in /backend/notebooks/database (the files with Request.csv, etc.)
+Call the API http://127.0.0.1:8000/ihlp/load
+This will take some time to load. It's the best method I got to work.
+
 ### Admin page
 Visit http://127.0.0.1:8000/admin/ with `-u tool -p t0o5m0m4y`
 

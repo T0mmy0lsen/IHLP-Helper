@@ -145,4 +145,10 @@ CORS_ORIGIN_WHITELIST = [
      'http://localhost:3002',
 ]
 
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework.authentication.SessionAuthentication",
+    ),
+}
+
 # BOOT = Boot(debug=False)
