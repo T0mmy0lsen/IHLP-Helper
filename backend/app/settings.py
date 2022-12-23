@@ -13,7 +13,6 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 from pathlib import Path
 
 # SECURITY WARNING: keep the secret key used in production secret!
-from ihlp.boot import Boot
 
 SECRET_KEY = 'django-insecure-kkgh5r^)ert)+67#qcrfkr-5vhokf_z8&#^s7hi$w@a@n^e)r9'
 
@@ -89,7 +88,8 @@ DATABASES = {
         'HOST': '127.0.0.1',
         'PORT': '3306',
         'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
+            'charset': 'utf8mb4',
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'; ALTER DATABASE request CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;",
         }
     },
 }
@@ -123,7 +123,7 @@ TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
@@ -145,4 +145,4 @@ CORS_ORIGIN_WHITELIST = [
      'http://localhost:3002',
 ]
 
-BOOT = Boot(debug=False)
+# BOOT = Boot(debug=False)

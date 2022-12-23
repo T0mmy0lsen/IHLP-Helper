@@ -2,6 +2,7 @@
 /frontend/.idea/
 
 /backend/notebooks/data
+/backend/notebooks/database
 /backend/notebooks/evaluate
 
 /backend/saved/pipeline/data/input
@@ -19,4 +20,5 @@
 /backend/saved/pipeline/models/data
 
 /backend/predict/data
+/backend/venv
 

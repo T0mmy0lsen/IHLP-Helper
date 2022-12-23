@@ -1,0 +1,48 @@
+### Remove files from git
+Did you commit some big files and made a mess?
+````
+java -jar bfg.jar --delete-files *.csv
+````
+
+### Run the frontend
+````
+cd /frontend
+
+npm install
+npm run start
+````
+
+### Run the backend
+
+````
+cd /backend
+
+python3 -m venv ./venv
+venv\Scripts\Activate.ps1
+
+python -m pip install django
+python -m pip install numpy
+python -m pip install pandas
+python -m pip install scikit-learn
+python -m pip install django-cors-headers
+python -m pip install djangorestframework
+python -m pip install mysqlclient
+
+python ./manage.py runserver 0.0.0.0:8000
+````
+### Admin page
+Visit http://127.0.0.1:8000/admin/ with `-u tool -p t0o5m0m4y`
+
+### Errors
+None.
+
+### Following the code
+
+Once the 
+
+### How the application works
+
+1. When a Request is received: users and time is predicted and saved to the database.
+2. For all open Request with Responsibles: the workload is calculated.
+3. The user may search in the Request that has a prediction.
+4. The user is presented with suggestions for the Responsible given prediction and workload.

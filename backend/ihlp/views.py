@@ -1,17 +1,22 @@
 import json
 
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render
 
 # Create your views here.
 # python manage.py runserver
 from django.views.decorators.csrf import csrf_exempt
 
-from app import settings
-from ihlp.boot import Boot
+from helpers.boot import Boot
+from helpers.jobs import calculateWorkload
 from ihlp.model.request import getRequestLike
-from schedule.parallel_machine_models import setPredict, getPredict
+from ihlp.model.predict import setPredict, getPredict
+from datetime import datetime
 
+@csrf_exempt
+def load(request):
+    boot = Boot()
+    boot.load()
+    return HttpResponse("{\"message\": \"loaded.\"}", content_type="application/json")
 
 @csrf_exempt
 def boot(request):
@@ -22,7 +27,7 @@ def boot(request):
 @csrf_exempt
 def reboot(request):
     boot = Boot()
-    boot.reboot()
+    boot.reset()
     boot.users()
     return HttpResponse("{\"message\": \"rebooted.\"}", content_type="application/json")
 
@@ -51,6 +56,16 @@ def request(request):
 
     if request.method == 'GET':
         text = request.GET['text']
-        return HttpResponse(getRequestLike(text), content_type="application/json")
+        time = request.GET['time']
+        return HttpResponse(getRequestLike(text, time), content_type="application/json")
+
+    return what(request)
+
+
+@csrf_exempt
+def workload(request):
+
+    if request.method == 'GET':
+        return JsonResponse(calculateWorkload(now=datetime.strptime("2022-09-27 15:25:00", "%Y-%m-%d %H:%M:%S")), safe=False)
 
     return what(request)
