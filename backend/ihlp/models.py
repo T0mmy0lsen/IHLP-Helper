@@ -1,47 +1,25 @@
 from django.db import models
 from jsonfield import JSONField
 
+# > python manage.py makemigrations ihlp
+# > python manage.py migrate
 
 class Predict(models.Model):
 
-    time = models.IntegerField()
-    responsible = JSONField()
+    request_id = models.IntegerField()
+    data = JSONField()
 
     def __str__(self):
-        return "Predict: " + str(self.id)
+        return "Predict: " + str(self.request_id)
 
+class Workload(models.Model):
 
-class Slot(models.Model):
-
-    keep = models.BooleanField()
-    user = models.CharField(max_length=255)
-    time = models.IntegerField()
-    index = models.IntegerField()
+    request_id = models.IntegerField()
+    username = models.CharField(max_length=100, blank=True, null=True)
+    data = JSONField()
 
     def __str__(self):
-        return "Slot: " + str(self.id)
-
-
-class Machine(models.Model):
-
-    user = models.CharField(max_length=255)
-    slots = models.ManyToManyField(Slot, blank=True)
-
-    def __str__(self):
-        return "Machine: " + str(self.user)
-
-
-class Schedule(models.Model):
-
-    name = models.CharField(max_length=255)
-    machines = models.ManyToManyField(Machine, blank=True)
-    predicts = models.ManyToManyField(Predict, blank=True)
-
-    def __str__(self):
-        return "Schedule: " + self.name
-
-
-
+        return "Predict: " + str(self.request_id)
 
 
 

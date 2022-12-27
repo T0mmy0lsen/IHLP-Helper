@@ -4,7 +4,7 @@ import time
 import numpy as np
 import pandas as pd
 
-from helpers.bulk_insert import BulkCreateManager
+from helpers.bulkinsert import BulkCreateManager
 from ihlp.models_ihlp import Request, Item, RelationHistory, ObjectHistory
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -116,7 +116,7 @@ class Boot:
 
         if ObjectHistory.objects.using('ihlp').count() == 0:
             PATH = BASE_DIR + '/notebooks/database/'
-            objects = pd.read_csv(PATH + 'ObjectHistory.csv', encoding='UTF-8', delimiter=';', quotechar='"', dtype=str)
+            objects = pd.read_csv(PATH + 'ObjectHistory.csv', encoding='UTF-8', delimiter=';', dtype=str)
             objects = objects.fillna(np.nan).replace([np.nan], [None])
             bulk_mgr = BulkCreateManager(chunk_size=50)
             for _, el in objects.iterrows():
@@ -124,7 +124,7 @@ class Boot:
                     id=el.id,
                     tblid=el.tblid,
                     externalid=el.externalId,
-                    name=el.name,
+                    name=el.values[2],  # el.name is an int, no idea why.
                     objecttype=el.objectType,
                     createdate=el.createDate,
                     createdby=el.createdBy,

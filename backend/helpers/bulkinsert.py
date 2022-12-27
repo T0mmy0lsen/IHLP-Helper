@@ -3,6 +3,7 @@ from django.apps import apps
 
 
 class BulkCreateManager(object):
+
     """
     This helper class keeps track of ORM objects to be created for multiple
     model classes, and automatically creates those objects with `bulk_create`

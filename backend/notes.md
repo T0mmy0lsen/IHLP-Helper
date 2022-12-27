@@ -1,6 +1,0 @@
-- From a text, predict an assignee
-- From an assigne, find the team and propose a schedule
-- Select by assignee og by schedule
-- If selected by assignee, still put in schedule
-- If selected by schedule, then free to assign, but not to reschedule if above is used
-- 
