@@ -6,32 +6,40 @@ from ihlp.models import Workload, Predict
 from ihlp.models_ihlp import Request, Item, RelationHistory, ObjectHistory
 from datetime import datetime, timedelta
 
-def calculateWorkload(time=datetime.strptime("2022-02-01 00:00:00", "%Y-%m-%d %H:%M:%S"), limit=1):
 
-    # We limit the resultset to be within the last n days from 'time'.
-    latest = time - timedelta(days=limit)
+def calculateWorkload(
+        time=datetime.strptime("2022-02-01 00:00:00", "%Y-%m-%d %H:%M:%S"),
+        limit=1,
+        df=None
+):
+    if df is None:
+        # We limit the result-set to be within the last n days from 'time'.
+        latest = time - timedelta(days=limit)
 
-    # The result should show all that does not have a solution and have been recevied after 'latest' and before 'time'.
-    # Note that 'time' is used to simulate a different current time.
-    queryset_requests = Request.objects.using('ihlp').filter(
-        Q(receiveddate__lte=time) & Q(receiveddate__gte=latest)
-    )
+        queryset_requests = Request.objects.using('ihlp').filter(
+            Q(receiveddate__lte=time) & Q(receiveddate__gte=latest)
+        )
 
-    df_requests = pd.DataFrame.from_records(queryset_requests.values('id'))
-    if len(df_requests) == 0:
+        # We limit the set to only Request.id
+        df = pd.DataFrame.from_records(queryset_requests.values('id'))
+        if len(df) == 0:
+            return False
+    else:
+        df = df[['id']]
+
+    # We get all prior predictions from the Request.id set. No need to predict twice (unless we change model).
+    df_workloads = pd.DataFrame.from_records(
+        Workload.objects.filter(request_id__in=list(df.id.values)).values('request_id'))
+
+    if len(df_workloads) > 0:
+        df = df[~df.id.isin(df_workloads.request_id.values)]
+        df = df.reset_index()
+
+    if len(df) == 0:
         return False
 
-    df_predictions = pd.DataFrame.from_records(
-        Workload.objects.filter(request_id__in=list(df_requests.id.values)).values('request_id'))
-
-    if len(df_predictions) > 0:
-        df_requests = df_requests[~df_requests.id.isin(df_predictions.request_id.values)]
-        df_requests = df_requests.reset_index()
-
-    if len(df_requests) == 0:
-        return False
-
-    queryset_relations = RelationHistory.objects.using('ihlp').filter(leftid__in=df_requests.id.values)
+    # Here we join the needed data to retrieve current Responsible and/or ReceivedBy
+    queryset_relations = RelationHistory.objects.using('ihlp').filter(leftid__in=df.id.values)
     df_relations = pd.DataFrame.from_records(queryset_relations.values('leftid', 'rightid', 'tblid'))
 
     queryset_objects = ObjectHistory.objects.using('ihlp').filter(tblid__in=df_relations.tblid.values)
@@ -49,7 +57,7 @@ def calculateWorkload(time=datetime.strptime("2022-02-01 00:00:00", "%Y-%m-%d %H
     df_items = df_items.rename(columns={'id': 'itemid'})
     df_items = df_items[df_items['username'] != '']
 
-    df = pd.merge(df_requests, df_relations, left_on='id', right_on='leftid', how='left')
+    df = pd.merge(df, df_relations, left_on='id', right_on='leftid', how='left')
     df = pd.merge(df, df_objects, on='tblid', how='inner')
     df = pd.merge(df, df_items, left_on='rightid', right_on='itemid', how='inner')
 
@@ -59,6 +67,9 @@ def calculateWorkload(time=datetime.strptime("2022-02-01 00:00:00", "%Y-%m-%d %H
     df = df[['id', 'username']]
     df.username = df.apply(lambda x: x.username.lower(), axis=1)
 
+    # This bit creates a list of users which index (almost) corresponds to the output of the model.
+    # The model with 500 labels; the output time is 'output % 5' and the output username is 'int(output / 5)'.
+
     PATH_RELATIVE = './ihlp/notebooks/data'
 
     df_label_users_top_100 = pd.read_csv(f'{PATH_RELATIVE}/label_users_top_100.csv')
@@ -66,6 +77,7 @@ def calculateWorkload(time=datetime.strptime("2022-02-01 00:00:00", "%Y-%m-%d %H
     tmp = tmp.sort_values(by='label_users_top_100')
     user_index = tmp.label_closed.values
 
+    # Get an array of indexes that is sorted by the value of the index, e.g. [21, 31, 10] -> [1, 0, 2]
     def get_top_index(x):
         return np.argsort(-np.array(x))[0]
 

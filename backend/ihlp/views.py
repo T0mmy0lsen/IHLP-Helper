@@ -11,6 +11,9 @@ from ihlp.controllers.request import getRequestLike
 from ihlp.controllers.predict import getPredict
 from datetime import datetime
 
+from ihlp.management.jobs.prediction import calculatePrediction
+from ihlp.management.jobs.workload import calculateWorkload
+
 
 @csrf_exempt
 def what(request):
@@ -23,24 +26,33 @@ def request(request):
 
     if request.method == 'GET':
 
+        predict = request.GET.get('predict', False)
         text = request.GET.get('text', False)
         time = request.GET.get('time', False)
 
-        time = "2022-02-01 00:00:00"
+        # time = "2022-02-01 00:00:00"
 
         if not time or time == 'false':
             time = datetime.now()
         else:
             time = datetime.strptime(time, "%Y-%m-%d %H:%M:%S")
 
-        data = getRequestLike(text, time)
-        data = getPredict(data)
+        df = getRequestLike(text, time)
+
+        if predict:
+            calculatePrediction(df=df)
+            calculateWorkload(df=df)
+
+        df = getPredict(df)
+
+        result = df.to_json(orient="records")
+        parsed = json.loads(result)
 
         return JsonResponse({
             'text': text,
             'time': time,
-            'length': len(data),
-            'data': data
+            'length': len(df),
+            'data': parsed
         }, safe=False)
 
     return what(request)
