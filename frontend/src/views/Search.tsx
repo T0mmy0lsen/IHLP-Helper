@@ -12,7 +12,7 @@ import {
     List,
     Post,
     Get, Main, ListItem,
-    Autocomplete, Conditions, ConditionsItem, Item, Search, Input
+    Autocomplete, Conditions, ConditionsItem, Item, Search, Input, Switch
 } from 'react-antd-admin-panel/dist';
 
 import {SectionComponent} from 'react-antd-admin-panel/dist';
@@ -44,7 +44,8 @@ export default class Home extends React.Component<any, any> {
                             target: `/request`,
                             params: {
                                 text: this.state.text,
-                                time: this.state.time ? this.state.time.format('YYYY-MM-DD HH:MM:ss') : false
+                                time: this.state.time ? this.state.time.format('YYYY-MM-DD HH:MM:ss') : false,
+                                predict: !!checkbox._data
                             }
                         }))
                         .onComplete((v: any) => {
@@ -52,7 +53,7 @@ export default class Home extends React.Component<any, any> {
                             if (data.length > 0) {
                                 condition.checkCondition({
                                     data: data,
-                                    loading: false
+                                    loading: false,
                                 })
                             }
                             input.tsxSetDisabled(false)
@@ -113,6 +114,8 @@ export default class Home extends React.Component<any, any> {
             )
         }
 
+        let checkbox = new Switch().data(true).toggleTrue('')
+
         let condition = new Conditions()
             .default(() => ({ value: undefined, loading: false }))
             .add(new ConditionsItem()
@@ -131,6 +134,8 @@ export default class Home extends React.Component<any, any> {
 
         section.style({ padding: '24px 36px' });
         section.add(new Title().label('Search for a Request').level(1));
+        section.add(checkbox)
+        section.add(new Space().top(16));
         section.add(new Section().component(Time, false))
         section.add(new Space().top(24));
         section.add(search);

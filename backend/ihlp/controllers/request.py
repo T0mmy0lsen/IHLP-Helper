@@ -1,6 +1,10 @@
+
+import pandas as pd
+
 from datetime import datetime, timedelta
 from django.db.models import Q
 from ihlp.models_ihlp import Request
+
 
 def getRequestLike(text, time=datetime.now(), limit=1):
 
@@ -16,5 +20,5 @@ def getRequestLike(text, time=datetime.now(), limit=1):
             (Q(receiveddate__lte=time) & Q(receiveddate__gte=latest))
         )
 
-    return list(queryset_requests.values())
+    return pd.DataFrame.from_records(queryset_requests.values())
 
