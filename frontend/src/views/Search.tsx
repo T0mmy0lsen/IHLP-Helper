@@ -30,6 +30,7 @@ export default class Home extends React.Component<any, any> {
             time: false,
             text: '',
             id: false,
+            workload: false,
         }
     }
 
@@ -45,10 +46,12 @@ export default class Home extends React.Component<any, any> {
                             params: {
                                 text: this.state.text,
                                 time: this.state.time ? this.state.time.format('YYYY-MM-DD HH:MM:ss') : false,
-                                predict: !!checkbox._data
+                                latest: !!checkboxLatest._data,
+                                predict: !!checkboxPredict._data
                             }
                         }))
                         .onComplete((v: any) => {
+                            this.setState({ workload: v.data.workload })
                             let data = v.data.data
                             if (data.length > 0) {
                                 condition.checkCondition({
@@ -70,23 +73,25 @@ export default class Home extends React.Component<any, any> {
             .default({ dataSource: args })
             .footer(false)
             .headerCreate(false)
-            .headerPrepend(new ListHeader().key('id').title('Request').sortable())
+            .headerPrepend(new ListHeader().key('id').title('Request').searchable())
             .headerPrepend(new ListHeader().key('subject').title('Subject').searchable())
             .expandable(() => true)
             .expandableExpandAll()
             .expandableSection((item: ListItem) => {
                 let data = item._object.predict.data.list
+                let workload = item._object.predict.workload
                 let list: any[] = []
                 Object.keys(data).forEach((key) => {
                     list.push({
                         user: key,
-                        weight: data[key].predictions_sum,
-                        estimate: data[key].predictions_index[0],
+                        weight: parseInt(data[key].predictions_sum),
+                        estimate: data[key].predictions_index[0] + 1,
+                        workload: this.state.workload[key] ?? 0
                     })
                 })
                 list = list.sort((a, b) => b.weight - a.weight)
                 list = list.slice(0, 10)
-                let section = new Section().style({ padding: '8px' })
+                let section = new Section().style({ paddingLeft: '14px'})
                 section.add(new List()
                     .unique((v) => v.user)
                     .default({ dataSource: list })
@@ -95,6 +100,7 @@ export default class Home extends React.Component<any, any> {
                     .headerPrepend(new ListHeader().key('user').title('User').searchable())
                     .headerPrepend(new ListHeader().key('weight').title('Weight').sortable())
                     .headerPrepend(new ListHeader().key('estimate').title('Estimate').searchable())
+                    .headerPrepend(new ListHeader().key('workload').title('Workload').searchable())
                 )
                 return section;
             })
@@ -114,7 +120,8 @@ export default class Home extends React.Component<any, any> {
             )
         }
 
-        let checkbox = new Switch().data(true).toggleTrue('')
+        let checkboxPredict = new Switch().data(true).toggleTrue('')
+        let checkboxLatest = new Switch().data(true).toggleTrue('')
 
         let condition = new Conditions()
             .default(() => ({ value: undefined, loading: false }))
@@ -134,8 +141,12 @@ export default class Home extends React.Component<any, any> {
 
         section.style({ padding: '24px 36px' });
         section.add(new Title().label('Search for a Request').level(1));
-        section.add(checkbox)
+        section.add(checkboxLatest)
+        section.add(new Section().component(() => <><div style={{ paddingTop: 4, paddingLeft: 0 }}>Take the top-n latest</div></>, false));
         section.add(new Space().top(16));
+        section.add(checkboxPredict)
+        section.add(new Section().component(() => <><div style={{ paddingTop: 4, paddingLeft: 0 }}>Insure all results has predictions</div></>, false));
+        section.add(new Space().top(24));
         section.add(new Section().component(Time, false))
         section.add(new Space().top(24));
         section.add(search);

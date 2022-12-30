@@ -2,7 +2,7 @@
 /frontend/.idea/
 
 /backend/ihlp/notebooks/data
-/backend/ihlp/notebooks/models
+/backend/ihlp/notebooks/data/models
 /backend/ihlp/notebooks/database
 /backend/ihlp/notebooks/evaluate
 
