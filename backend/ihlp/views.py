@@ -7,12 +7,12 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view
 
-from ihlp.controllers.request import getRequestLike
+from ihlp.controllers.request import getRequestLatest, getRequestLike, getRequest
 from ihlp.controllers.predict import getPredict
 from datetime import datetime
 
 from ihlp.management.jobs.prediction import calculatePrediction
-from ihlp.management.jobs.workload import calculateWorkload
+from ihlp.management.jobs.workload import calculateWorkload, calculateWorkloadTotal
 
 
 @csrf_exempt
@@ -27,6 +27,7 @@ def request(request):
     if request.method == 'GET':
 
         predict = request.GET.get('predict', False)
+        latest = request.GET.get('latest', False)
         text = request.GET.get('text', False)
         time = request.GET.get('time', False)
 
@@ -37,7 +38,21 @@ def request(request):
         else:
             time = datetime.strptime(time, "%Y-%m-%d %H:%M:%S")
 
-        df = getRequestLike(text, time)
+        if text.isdigit():
+            df = getRequest(text)
+        elif latest:
+            df = getRequestLatest(text)
+        else:
+            df = getRequestLike(text, time)
+
+        if len(df) == 0:
+            return JsonResponse({
+                'text': text,
+                'time': time,
+                'length': 0,
+                'workload': False,
+                'data': False
+            }, safe=False)
 
         if predict:
             calculatePrediction(df=df)
@@ -52,6 +67,7 @@ def request(request):
             'text': text,
             'time': time,
             'length': len(df),
+            'workload': calculateWorkloadTotal(time),
             'data': parsed
         }, safe=False)
 

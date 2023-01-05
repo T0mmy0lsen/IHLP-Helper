@@ -7,6 +7,46 @@ from ihlp.models_ihlp import Request, Item, RelationHistory, ObjectHistory
 from datetime import datetime, timedelta
 
 
+def calculateWorkloadTotal(
+    time=datetime.strptime("2022-02-01 00:00:00", "%Y-%m-%d %H:%M:%S"),
+    limit=14,
+    df=None
+):
+
+    latest = time - timedelta(days=limit)
+
+    # The result should show all that does not have a solution and have been received after 'latest' and before 'time'.
+    # Note that 'time' is used to simulate a different current time.
+    queryset_requests = Request.objects.using('ihlp').filter(
+        (Q(closingcode=None) | Q(solutiondate__gte=time)) & Q(receiveddate__lte=time) & Q(receiveddate__gte=latest)
+    )
+
+    # We can't write in the Request table, so we need to keep track of which has been predicted separately.
+    # So we get all Request, and filter out those we already predicted.
+    df = pd.DataFrame.from_records(queryset_requests.values('id'))
+
+    if len(df) == 0:
+        return False
+
+    df_workloads = pd.DataFrame.from_records(
+        Workload.objects.filter(request_id__in=list(df.id.values)).values())
+
+    if len(df_workloads) == 0:
+        return False
+
+    PATH_RELATIVE = './ihlp/notebooks/data'
+
+    df_label_users_top_100 = pd.read_csv(f'{PATH_RELATIVE}/label_users_top_100.csv')
+    tmp = df_label_users_top_100.drop_duplicates(subset=['label_closed', 'label_users_top_100'])
+    tmp = tmp.sort_values(by='label_users_top_100')
+    user_index = tmp.label_closed.values
+
+    workloads = {}
+    for user in user_index:
+        workloads[user] = sum(e['workload'] for e in df_workloads[df_workloads.username == user].data)
+    return workloads
+
+
 def calculateWorkload(
         time=datetime.strptime("2022-02-01 00:00:00", "%Y-%m-%d %H:%M:%S"),
         limit=1,

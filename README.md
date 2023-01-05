@@ -29,6 +29,7 @@ python -m pip install djangorestframework
 python -m pip install mysqlclient
 python -m pip install jsonfield
 python -m pip install lxml
+python -m pip install beautifulsoup4
 
 python ./manage.py runserver 0.0.0.0:8000
 ````
