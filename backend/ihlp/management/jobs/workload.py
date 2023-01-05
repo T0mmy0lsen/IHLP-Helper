@@ -61,6 +61,10 @@ def calculateWorkload(
     df = pd.merge(df, df_objects, on='tblid', how='inner')
     df = pd.merge(df, df_items, left_on='rightid', right_on='itemid', how='inner')
 
+    if len(df) == 0:
+        print('The dataframe is empty. Something probably went wrong.')
+        return False
+
     df = df.sort_values(by=['tblid'])
     df = df.rename(columns={'id_x': 'id'})
     df = df.drop_duplicates(keep='last', subset=['id'])
