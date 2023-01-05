@@ -21,7 +21,11 @@ def calculatePrediction(
     if df is None:
         # TODO: Get a list of requests without predictions. Should be limited.
 
+<<<<<<< HEAD
         # We limit the result set to be within the last n days from 'time'.
+=======
+        # We limit the resultset to be within the last n days from 'time'.
+>>>>>>> 5e8c329722e2f3dfc4bd8aca14ec782e5ee02e5e
         latest = time - timedelta(days=limit)
 
         # The result should show all that does not have a solution and have been received after 'latest' and before 'time'.
@@ -106,7 +110,10 @@ def calculatePrediction(
         return obj
 
     # TODO: Save predictions
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5e8c329722e2f3dfc4bd8aca14ec782e5ee02e5e
     for i, el in df.iterrows():
         Predict(
             request_id=el.id,

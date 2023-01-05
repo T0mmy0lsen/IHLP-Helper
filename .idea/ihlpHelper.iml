@@ -24,7 +24,11 @@
       <excludeFolder url="file://$MODULE_DIR$/backend/saved/predict/input" />
       <excludeFolder url="file://$MODULE_DIR$/backend/venv" />
     </content>
+<<<<<<< HEAD
     <orderEntry type="jdk" jdkName="Python 3.10 (ihlp-helper)" jdkType="Python SDK" />
+=======
+    <orderEntry type="jdk" jdkName="Python 3.8 (ihlp-helper) (2)" jdkType="Python SDK" />
+>>>>>>> 5e8c329722e2f3dfc4bd8aca14ec782e5ee02e5e
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyNamespacePackagesService">
