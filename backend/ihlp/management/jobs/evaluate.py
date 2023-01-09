@@ -95,12 +95,12 @@ def evaluate(
 ):
     df_evaluation = pd.read_csv('output/2022-02-01.csv')
 
-    user = 'tpieler'
+    user = 'ad/uc/mail its'
 
     plt.plot(df_evaluation[f't_{user}'].values, label=f't_{user}')
     plt.plot(df_evaluation[f'p_{user}'].values, label=f'p_{user}')
 
-    user = 'ep'
+    user = 'backup its'
 
     plt.plot(df_evaluation[f't_{user}'].values, label=f't_{user}')
     plt.plot(df_evaluation[f'p_{user}'].values, label=f'p_{user}')

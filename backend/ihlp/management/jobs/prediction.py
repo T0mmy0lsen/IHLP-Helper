@@ -20,12 +20,7 @@ def calculatePrediction(
 ):
     if df is None:
         # TODO: Get a list of requests without predictions. Should be limited.
-
-<<<<<<< HEAD
         # We limit the result set to be within the last n days from 'time'.
-=======
-        # We limit the resultset to be within the last n days from 'time'.
->>>>>>> 5e8c329722e2f3dfc4bd8aca14ec782e5ee02e5e
         latest = time - timedelta(days=limit)
 
         # The result should show all that does not have a solution and have been received after 'latest' and before 'time'.
@@ -57,13 +52,6 @@ def calculatePrediction(
         x = bs4.BeautifulSoup(x, "lxml").text
         x = x.replace(u'\u00A0', ' ')
         x = x.lower()
-        # x = x.encode('ascii', 'ignore').decode()
-        x = re.sub(r'https*\S+', ' ', x)
-        x = re.sub(r'http*\S+', ' ', x)
-        x = re.sub(r'\'\w+', '', x)
-        x = re.sub(r'\w*\d+\w*', '', x)
-        x = re.sub(r'\s{2,}', ' ', x)
-        x = re.sub(r'\s[^\w\s]\s', '', x)
         return x
 
     df['text'] = df.apply(lambda x: text_combine_and_clean(x)[:512], axis=1)
@@ -87,12 +75,12 @@ def calculatePrediction(
 
     tokenized_text = dict(tokenize_texts(list(df.text.values)))
 
-    model.compile(metrics=[tf.keras.metrics.SparseTopKCategoricalAccuracy(k=10)])
+    model.compile(metrics=[tf.keras.metrics.SparseTopKCategoricalAccuracy(k=5)])
     predict = model.predict(tokenized_text, batch_size=1, verbose=False)
 
     df_label_users_top_100 = pd.read_csv(f'{PATH_RELATIVE}/data/label_users_top_100.csv')
-    tmp = df_label_users_top_100.drop_duplicates(subset=['label_closed', 'label_users_top_100'])
-    tmp = tmp.sort_values(by='label_users_top_100')
+    tmp = df_label_users_top_100.drop_duplicates(subset=['label_closed', 'label_encoded'])
+    tmp = tmp.sort_values(by='label_encoded')
     user_index = tmp.label_closed.values
 
     def get_as_list(i):
@@ -110,10 +98,6 @@ def calculatePrediction(
         return obj
 
     # TODO: Save predictions
-<<<<<<< HEAD
-
-=======
->>>>>>> 5e8c329722e2f3dfc4bd8aca14ec782e5ee02e5e
     for i, el in df.iterrows():
         Predict(
             request_id=el.id,

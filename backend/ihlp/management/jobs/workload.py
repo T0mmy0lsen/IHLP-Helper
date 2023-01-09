@@ -3,7 +3,7 @@ import numpy as np
 
 from django.db.models import Q
 from ihlp.models import Workload, Predict
-from ihlp.models_ihlp import Request, Item, RelationHistory, ObjectHistory
+from ihlp.models_ihlp import Request, Item, RelationHistory, ObjectHistory, Relation, Object
 from datetime import datetime, timedelta
 
 
@@ -79,34 +79,32 @@ def calculateWorkload(
         return False
 
     # Here we join the needed data to retrieve current Responsible and/or ReceivedBy
-    queryset_relations = RelationHistory.objects.using('ihlp').filter(leftid__in=df.id.values)
-    df_relations = pd.DataFrame.from_records(queryset_relations.values('leftid', 'rightid', 'tblid'))
+    queryset_relations = Relation.objects.using('ihlp').filter(leftid__in=df.id.values)
+    df_relations = pd.DataFrame.from_records(queryset_relations.values('leftid', 'rightid', 'id'))
+    df_relations = df_relations.rename(columns={'id': 'relationid'})
 
-    queryset_objects = ObjectHistory.objects.using('ihlp').filter(tblid__in=df_relations.tblid.values)
+    queryset_objects = Object.objects.using('ihlp').filter(id__in=df_relations.relationid.tolist() + df_relations.rightid.tolist())
     queryset_items = Item.objects.using('ihlp').filter(id__in=df_relations.rightid.values)
 
     df_objects = pd.DataFrame.from_records(queryset_objects.values())
-    df_objects = df_objects[df_objects['name'].isin([
-        'RequestServiceResponsible',
-        'RequestServiceReceivedBy',
-        'RequestIncidentResponsible',
-        'RequestIncidentReceivedBy',
-    ])]
+    df_objects = df_objects.rename(columns={'id': 'objectid'})
 
     df_items = pd.DataFrame.from_records(queryset_items.values())
     df_items = df_items.rename(columns={'id': 'itemid'})
     df_items = df_items[df_items['username'] != '']
 
     df = pd.merge(df, df_relations, left_on='id', right_on='leftid', how='left')
-    df = pd.merge(df, df_objects, on='tblid', how='inner')
-    df = pd.merge(df, df_items, left_on='rightid', right_on='itemid', how='inner')
+    df = pd.merge(df, df_objects, left_on='relationid', right_on='objectid', how='inner')
+    df = pd.merge(df, df_objects, left_on='rightid', right_on='objectid', how='inner')
+    df = pd.merge(df, df_items, left_on='rightid', right_on='itemid', how='left')
+
+    df['username'] = df.apply(lambda x: x['name_y'] if x['name_x'][-9:] == 'Placement' else x['username'], axis=1)
 
     if len(df) == 0:
         print('The dataframe is empty. Something probably went wrong.')
         return False
 
-    df = df.sort_values(by=['tblid'])
-    df = df.rename(columns={'id_x': 'id'})
+    df = df.sort_values(by=['id'])
     df = df.drop_duplicates(keep='last', subset=['id'])
     df = df[['id', 'username']]
     df.username = df.apply(lambda x: x.username.lower(), axis=1)
@@ -117,8 +115,8 @@ def calculateWorkload(
     PATH_RELATIVE = './ihlp/notebooks/data'
 
     df_label_users_top_100 = pd.read_csv(f'{PATH_RELATIVE}/label_users_top_100.csv')
-    tmp = df_label_users_top_100.drop_duplicates(subset=['label_closed', 'label_users_top_100'])
-    tmp = tmp.sort_values(by='label_users_top_100')
+    tmp = df_label_users_top_100.drop_duplicates(subset=['label_closed', 'label_encoded'])
+    tmp = tmp.sort_values(by='label_encoded')
     user_index = tmp.label_closed.values
 
     # Get an array of indexes that is sorted by the value of the index, e.g. [21, 31, 10] -> [1, 0, 2]

@@ -65,7 +65,7 @@ class RelationExportTasktype(models.Model):
 class Object(models.Model):
 
     id = models.PositiveBigIntegerField(blank=True, primary_key=True)
-    externalid = models.PositiveBigIntegerField(db_column='externalId', blank=True, null=True)
+    externalid = models.CharField(max_length=100, blank=True, null=True)
     name = models.CharField(max_length=100, blank=True, null=True)
     objecttype = models.CharField(db_column='objectType', max_length=100, blank=True, null=True)
     createdate = models.DateTimeField(db_column='createDate', blank=True, null=True)

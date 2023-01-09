@@ -11,7 +11,7 @@ def check_if_can_load():
 
     import pandas as pd
 
-    df = pd.read_csv('input/0_sandbox/Items.csv', encoding='UTF-8', delimiter=';', quotechar='"', dtype=str)
+    df = pd.read_csv('input/0_sandbox/Item.csv', encoding='UTF-8', delimiter=';', quotechar='"', dtype=str)
     df.to_csv('input/1_data_modeling/items.csv', index=False)
     print("Items:", len(df))
 

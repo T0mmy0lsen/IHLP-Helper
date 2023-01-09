@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from helpers.bulkinsert import BulkCreateManager
-from ihlp.models_ihlp import Request, Item, RelationHistory, ObjectHistory
+from ihlp.models_ihlp import Request, Item, RelationHistory, ObjectHistory, Relation, Object
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
@@ -26,7 +26,7 @@ class Boot:
 
         if Request.objects.using('ihlp').count() == 0:
             PATH = BASE_DIR + '/notebooks/database/'
-            requests = pd.read_csv(PATH + 'Requests.csv', encoding='UTF-8', delimiter=';', quotechar='"', dtype=str)
+            requests = pd.read_csv(PATH + 'Request.csv', encoding='UTF-8', delimiter=';', quotechar='"', dtype=str)
             requests = requests.fillna(np.nan).replace([np.nan], [None])
             bulk_mgr = BulkCreateManager(chunk_size=50)
             for _, el in requests.iterrows():
@@ -69,7 +69,7 @@ class Boot:
 
         if Item.objects.using('ihlp').count() == 0:
             PATH = BASE_DIR + '/notebooks/database/'
-            items = pd.read_csv(PATH + 'Items.csv', encoding='UTF-8', delimiter=';', quotechar='"', dtype=str)
+            items = pd.read_csv(PATH + 'Item.csv', encoding='UTF-8', delimiter=';', quotechar='"', dtype=str)
             items = items.fillna(np.nan).replace([np.nan], [None])
             bulk_mgr = BulkCreateManager(chunk_size=50)
             for _, el in items.iterrows():
@@ -96,33 +96,30 @@ class Boot:
                 ))
             bulk_mgr.done()
 
-        if RelationHistory.objects.using('ihlp').count() == 0:
+        if Relation.objects.using('ihlp').count() == 0:
             PATH = BASE_DIR + '/notebooks/database/'
-            relations = pd.read_csv(PATH + 'RelationHistory.csv', encoding='UTF-8', delimiter=';', quotechar='"', dtype=str)
+            relations = pd.read_csv(PATH + 'Relation.csv', encoding='UTF-8', delimiter=';', quotechar='"', dtype=str)
             relations = relations.fillna(np.nan).replace([np.nan], [None])
             bulk_mgr = BulkCreateManager(chunk_size=50)
             for _, el in relations.iterrows():
-                bulk_mgr.add(RelationHistory(
+                bulk_mgr.add(Relation(
                     id=el.id,
                     leftid=el.leftID,
                     rightid=el.rightID,
                     relationtypeid=el.relationTypeID,
                     lefttype=el.leftType,
-                    righttype=el.rightType,
-                    tblid=el.tblid,
-                    tbltimestamp=el.tblTimeStamp
+                    righttype=el.rightType
                 ))
             bulk_mgr.done()
 
-        if ObjectHistory.objects.using('ihlp').count() == 0:
+        if Object.objects.using('ihlp').count() == 0:
             PATH = BASE_DIR + '/notebooks/database/'
-            objects = pd.read_csv(PATH + 'ObjectHistory.csv', encoding='UTF-8', delimiter=';', dtype=str)
+            objects = pd.read_csv(PATH + 'Object.csv', encoding='UTF-8', delimiter=';', dtype=str)
             objects = objects.fillna(np.nan).replace([np.nan], [None])
             bulk_mgr = BulkCreateManager(chunk_size=50)
             for _, el in objects.iterrows():
-                bulk_mgr.add(ObjectHistory(
+                bulk_mgr.add(Object(
                     id=el.id,
-                    tblid=el.tblid,
                     externalid=el.externalId,
                     name=el.values[2],  # el.name is an int, no idea why.
                     objecttype=el.objectType,
@@ -131,8 +128,8 @@ class Boot:
                     altereddate=el.alteredDate,
                     alteredby=el.alteredBy,
                     state=el.state,
-                    owntimestamp=el.OwnTimeStamp,
                     metatype=el.metaType,
+                    syncid=el.syncid,
                     indicatorchangedate=el.indicatorchangedate,
                     enterpriceroot=el.enterpriceroot
                 ))
