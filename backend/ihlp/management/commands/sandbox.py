@@ -17,8 +17,8 @@ class Command(BaseCommand):
         limit = 28
         df = None
 
-        calculatePrediction(time, limit, df)
-        calculateWorkload(time, limit, df)
+        # calculatePrediction(time, limit, df)
+        # calculateWorkload(time, limit, df)
 
-        evaluateWorkloadWithUserPredictionAndSchedule(time=time, limit=limit, df=df)
+        # evaluateWorkloadWithUserPredictionAndSchedule(time=time, limit=limit, df=df)
         evaluate()

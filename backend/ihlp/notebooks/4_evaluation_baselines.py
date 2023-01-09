@@ -99,8 +99,8 @@ class ModelBaseline:
         x_test_tfidf = x_test_tfidf['0']
 
         evaluate(x_train_tfidf, y_train, x_test_tfidf, y_test, 'log', do_top_k=True, clf=LogisticRegression(max_iter=100, C=1.0))
-        evaluate(x_train_tfidf, y_train, x_test_tfidf, y_test, 'rfc', clf=RandomForestClassifier(n_estimators=100))
-        evaluate(x_train_tfidf, y_train, x_test_tfidf, y_test, 'knn', clf=KNeighborsClassifier(n_neighbors=2))
+        evaluate(x_train_tfidf, y_train, x_test_tfidf, y_test, 'rfc', do_top_k=True, clf=RandomForestClassifier(n_estimators=100))
+        evaluate(x_train_tfidf, y_train, x_test_tfidf, y_test, 'knn', do_top_k=True, clf=KNeighborsClassifier(n_neighbors=2))
         # evaluate(x_train_tfidf, y_train, x_test_tfidf, y_test, 'svm', clf=svm.SVC(probability=True, max_iter=-1, verbose=1))
 
 
