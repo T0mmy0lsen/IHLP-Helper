@@ -61,8 +61,8 @@ class ModelBaseline:
                 print(f"[{name}] Error:", total / len(y_v))
                 print(f"[{name}] Loss:", classification_report(y_v, probs))
 
-        df_train = pd.read_csv('data/cached_train_label_time_encoded.csv')
-        df_test = pd.read_csv('data/cached_test_label_time_encoded.csv')
+        df_train = pd.read_csv('data/cached_train_label_responsible.csv')
+        df_test = pd.read_csv('data/cached_test_label_responsible.csv')
 
         # df_train = df_train[:1000]
 
@@ -72,7 +72,7 @@ class ModelBaseline:
         x_test = df_test.text
         y_test = df_test.label
 
-        # evaluate(x_train, y_train, x_test, y_test, 'dum', do_top_k=True, clf=DummyClassifier(strategy='prior'))
+        evaluate(x_train, y_train, x_test, y_test, 'dum', do_top_k=True, clf=DummyClassifier(strategy='prior'))
 
         if not HAS_CACHE_DATA:
 
@@ -90,17 +90,17 @@ class ModelBaseline:
             x_train_tfidf.to_csv('data/cached_train_tfidf.csv')
             x_test_tfidf.to_csv('data/cached_test_tfidf.csv')
 
-        x_train_tfidf = pd.read_csv('data/cached_train_tfidf.csv')
-        x_train_tfidf['0'] = x_train_tfidf.apply(lambda x: literal_eval(x['0']), axis=1)
-        x_train_tfidf = x_train_tfidf['0']
+        # x_train_tfidf = pd.read_csv('data/cached_train_tfidf.csv')
+        # x_train_tfidf['0'] = x_train_tfidf.apply(lambda x: literal_eval(x['0']), axis=1)
+        # x_train_tfidf = x_train_tfidf['0']
 
-        x_test_tfidf = pd.read_csv('data/cached_test_tfidf.csv')
-        x_test_tfidf['0'] = x_test_tfidf.apply(lambda x: literal_eval(x['0']), axis=1)
-        x_test_tfidf = x_test_tfidf['0']
+        # x_test_tfidf = pd.read_csv('data/cached_test_tfidf.csv')
+        # x_test_tfidf['0'] = x_test_tfidf.apply(lambda x: literal_eval(x['0']), axis=1)
+        # x_test_tfidf = x_test_tfidf['0']
 
-        evaluate(x_train_tfidf, y_train, x_test_tfidf, y_test, 'log', do_top_k=True, clf=LogisticRegression(max_iter=100, C=1.0))
-        evaluate(x_train_tfidf, y_train, x_test_tfidf, y_test, 'rfc', do_top_k=True, clf=RandomForestClassifier(n_estimators=100))
-        evaluate(x_train_tfidf, y_train, x_test_tfidf, y_test, 'knn', do_top_k=True, clf=KNeighborsClassifier(n_neighbors=2))
+        # evaluate(x_train_tfidf, y_train, x_test_tfidf, y_test, 'log', do_top_k=True, clf=LogisticRegression(max_iter=100, C=1.0))
+        # evaluate(x_train_tfidf, y_train, x_test_tfidf, y_test, 'rfc', do_top_k=True, clf=RandomForestClassifier(n_estimators=100))
+        # evaluate(x_train_tfidf, y_train, x_test_tfidf, y_test, 'knn', do_top_k=True, clf=KNeighborsClassifier(n_neighbors=2))
         # evaluate(x_train_tfidf, y_train, x_test_tfidf, y_test, 'svm', clf=svm.SVC(probability=True, max_iter=-1, verbose=1))
 
 

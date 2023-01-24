@@ -46,25 +46,30 @@ def initialDataset(
 
 
     df_workloads = pd.DataFrame.from_records(
-        Workload.objects.filter(request_id__in=list(df.id.values)).values('request_id', 'data', 'username'))
+        Workload.objects.filter(request_id__in=list(df.id.values)).values('request_id', 'data'))
     df_predictions = pd.DataFrame.from_records(
         Predict.objects.filter(request_id__in=list(df.id.values)).values('request_id', 'data'))
 
     df = df.rename(columns={'id': 'request_id'})
-    df_workloads = df_workloads.rename(columns={'data': 'workload_object', 'username': 'username_true'})
+    df_workloads = df_workloads.rename(columns={'data': 'workload_object'})
     df_predictions = df_predictions.rename(columns={'data': 'prediction_object'})
 
     df = pd.merge(df, df_predictions, on='request_id')
     df = pd.merge(df, df_workloads, on='request_id')
 
     # Prepare the workload data.
-    df['workload_true'] = df.apply(lambda x: float(x['timeconsumption']) if float(x['timeconsumption']) < 50.0 else 50.0, axis=1)
-    df['workload_true'] = pd.cut(df['workload_true'], bins=[0.0, 2.0, 5.0, 10.0, 25.0, 50.0], labels=[1, 2, 3, 4, 5])
-    df['workload_true'] = df.apply(lambda x: int(x.workload_true), axis=1)
+    df['true_time'] = df.apply(lambda x: float(x.timeconsumption) if float(x.timeconsumption) < 50.0 else 50.0, axis=1)
+    df['true_time'] = pd.cut(df['true_time'], bins=[0.0, 2.0, 5.0, 10.0, 25.0, 50.0], labels=[1, 2, 3, 4, 5])
+    df['true_time'] = df.apply(lambda x: int(x.workload_true), axis=1)
 
-    df['workload_predict_for_username_true'] = df.workload_true
-    df['workload_predict_for_username_predict'] = df.workload_true
-    df['username_predict'] = df.username_true
+    df['predict_time_for_true_responsible'] = df.workload_true
+    df['predict_time_for_predict_responsible'] = df.workload_true
+
+    df['true_responsible'] = df.data['responsible']
+    df['true_placement'] = df.data['placement']
+
+    df['predict_responsible'] = df.data['responsible']
+    df['predict_placement'] = df.data['placement']
 
     if len(df) == 0:
         print('The dataframe is empty. Something probably went wrong.')
@@ -132,7 +137,7 @@ def evaluateWorkloadWithUserPredictionAndSchedule(
 
     for i, el in initial_df.iterrows():
 
-        # Firstly we set som decision boundaries.
+        # Firstly we set some decision boundaries.
         # These boundaries are determined by all request that does not have a solution
 
         # Give me all elements that comes before and including el.received.

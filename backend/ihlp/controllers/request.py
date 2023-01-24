@@ -6,34 +6,30 @@ from django.db.models import Q
 from ihlp.models_ihlp import Request
 
 
-def getRequest(text):
-    queryset_requests = Request.objects.using('ihlp').filter(id=int(text))
+def getRequest(text, limit=None):
+
+    queryset_requests = Request.objects.using('ihlp').filter(id=text)
+
+    if limit is not None:
+        queryset_requests = queryset_requests[:limit]
+
     return pd.DataFrame.from_records(queryset_requests.values())
 
-def getRequestLike(text, time=datetime.now(), limit=1):
 
-    latest = time - timedelta(days=limit)
+def getRequestLike(text, limit=None):
 
     if text == "":
-        queryset_requests = Request.objects.using('ihlp').filter(
-            Q(receiveddate__lte=time) & Q(receiveddate__gte=latest)
-        )
+        queryset_requests = Request.objects.using('ihlp').order_by('-id')
     else:
         queryset_requests = Request.objects.using('ihlp').filter(
-            (Q(subject__contains=text) | Q(description__contains=text)) &
-            (Q(receiveddate__lte=time) & Q(receiveddate__gte=latest))
-        )
+            (Q(subject__contains=text) | Q(description__contains=text))
+        ).order_by('-id')
+
+    if limit is not None:
+        queryset_requests = queryset_requests[:limit]
 
     return pd.DataFrame.from_records(queryset_requests.values())
 
-def getRequestLatest(text):
 
-    if text == "":
-        queryset_requests = Request.objects.using('ihlp').order_by('-id')[:10]
-    else:
-        queryset_requests = Request.objects.using('ihlp').filter(
-            Q(subject__contains=text) | Q(description__contains=text)
-        ).order_by('-id')[:10]
 
-    return pd.DataFrame.from_records(queryset_requests.values())
 

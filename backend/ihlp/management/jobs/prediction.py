@@ -48,20 +48,21 @@ def calculatePrediction(
         return False
 
     def text_combine_and_clean(x):
-        x = x['subject'] + " " + x['description']
+        x = x['subject'] + ". " + x['description']
         x = bs4.BeautifulSoup(x, "lxml").text
+        x = x.replace('/\s\s+/g', ' ')
+        x = x.replace('/\n\n+/g', ' ')
+        x = x.replace('/\t\t+/g', ' ')
         x = x.replace(u'\u00A0', ' ')
         x = x.lower()
         return x
 
     df['text'] = df.apply(lambda x: text_combine_and_clean(x)[:512], axis=1)
 
-
     # TODO: Use model to do predictions
 
     PATH_RELATIVE = './ihlp/notebooks'
 
-    model = TFAutoModelForSequenceClassification.from_pretrained(f'{PATH_RELATIVE}/data/models/IHLP-XLM-RoBERTa-Time-Encoded')
     tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
 
     def tokenize_texts(sentences, max_length=512, padding='max_length'):
@@ -75,33 +76,52 @@ def calculatePrediction(
 
     tokenized_text = dict(tokenize_texts(list(df.text.values)))
 
-    model.compile(metrics=[tf.keras.metrics.SparseTopKCategoricalAccuracy(k=5)])
-    predict = model.predict(tokenized_text, batch_size=1, verbose=False)
+    model_responsible = TFAutoModelForSequenceClassification.from_pretrained(f'{PATH_RELATIVE}/data/models/IHLP-XLM-RoBERTa-Responsible')
+    model_responsible.compile(metrics=[tf.keras.metrics.SparseTopKCategoricalAccuracy(k=5)])
+    predict_responsible = model_responsible.predict(tokenized_text, batch_size=1, verbose=False)
 
-    df_label_users_top_100 = pd.read_csv(f'{PATH_RELATIVE}/data/label_users_top_100.csv')
-    tmp = df_label_users_top_100.drop_duplicates(subset=['label_closed', 'label_encoded'])
-    tmp = tmp.sort_values(by='label_encoded')
-    user_index = tmp.label_closed.values
+    df_label_responsible = pd.read_csv(f'{PATH_RELATIVE}/data/label_responsible.csv')
+    df_tmp_responsible = df_label_responsible.drop_duplicates(subset=['label_responsible', 'label_encoded'])
+    df_tmp_responsible = df_tmp_responsible.sort_values(by='label_encoded')
+    responsible_index = df_tmp_responsible.label_responsible.values
 
-    def get_as_list(i):
-        obj = {}
-        for val in user_index:
-            obj[val] = {}
-        predictions = predict[0][i]
+    model_placement = TFAutoModelForSequenceClassification.from_pretrained(f'{PATH_RELATIVE}/data/models/IHLP-XLM-RoBERTa-Placement')
+    model_placement.compile(metrics=[tf.keras.metrics.SparseTopKCategoricalAccuracy(k=5)])
+    predict_placement = model_placement.predict(tokenized_text, batch_size=1, verbose=False)
+
+    df_label_placement = pd.read_csv(f'{PATH_RELATIVE}/data/label_placement.csv')
+    df_tmp_placement = df_label_placement.drop_duplicates(subset=['label_placement', 'label_encoded'])
+    df_tmp_placement = df_tmp_placement.sort_values(by='label_encoded')
+    placement_index = df_tmp_placement.label_placement.values
+
+    def get_responsible_as_list(predictions):
+        lst = []
         for i, val in enumerate(predictions):
-            if i % 5 == 0:
-                user = user_index[int(i / 5)]
-                user_predictions = predictions[i:i + 5]
-                obj[user]['predictions'] = user_predictions
-                obj[user]['predictions_sum'] = sum(user_predictions)
-                obj[user]['predictions_index'] = np.argsort(-np.array(user_predictions))
-        return obj
+            lst.append({
+                'name': responsible_index[i],
+                'prediction_log': predictions[i],
+            })
+        lst.sort(key=lambda x: x['prediction_log'], reverse=True)
+        return lst
+
+    def get_placement_as_list(predictions):
+        lst = []
+        for i, val in enumerate(predictions):
+            lst.append({
+                'name': placement_index[i],
+                'prediction_log': predictions[i],
+            })
+        lst.sort(key=lambda x: x['prediction_log'], reverse=True)
+        return lst
 
     # TODO: Save predictions
     for i, el in df.iterrows():
         Predict(
             request_id=el.id,
-            data={'prediction': predict[0][i], 'list': get_as_list(i)}
+            data={
+                'responsible': get_responsible_as_list(predict_responsible[0][i]),
+                'placement': get_placement_as_list(predict_placement[0][i]),
+            }
         ).save()
 
     return True

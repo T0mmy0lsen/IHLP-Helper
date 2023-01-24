@@ -6,8 +6,8 @@ import tensorflow as tf
 
 from transformers import TFAutoModelForSequenceClassification, AutoTokenizer
 
-LABEL = 'label_time_encoded'
-LABEL_MODEL = 'Time-Encoded'
+LABEL = 'label_responsible'
+LABEL_MODEL = 'Responsible'
 
 model = TFAutoModelForSequenceClassification.from_pretrained(f'data/models/IHLP-XLM-RoBERTa-{LABEL_MODEL}')
 tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
