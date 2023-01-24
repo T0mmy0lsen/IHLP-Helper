@@ -4,6 +4,17 @@ Did you commit some big files and made a mess?
 java -jar bfg.jar --delete-files *.csv
 ````
 
+Did you pull and made a local mess?
+````
+git merge --abort
+````
+
+Did you prefer your local changes?
+````
+git push origin --force
+````
+
+
 ### Run the frontend
 ````
 cd /frontend

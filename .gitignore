@@ -24,3 +24,5 @@
 /backend/predict/data
 /backend/venv
 
+/backend/*.sqlite3
+
