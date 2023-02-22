@@ -112,6 +112,24 @@ class Boot:
                 ))
             bulk_mgr.done()
 
+        if RelationHistory.objects.using('ihlp').count() == 0:
+            PATH = BASE_DIR + '/notebooks/database/'
+            relations = pd.read_csv(PATH + 'RelationHistory.csv', encoding='UTF-8', delimiter=';', quotechar='"', dtype=str)
+            relations = relations.fillna(np.nan).replace([np.nan], [None])
+            bulk_mgr = BulkCreateManager(chunk_size=50)
+            for _, el in relations.iterrows():
+                bulk_mgr.add(RelationHistory(
+                    id=el.id,
+                    leftid=el.leftID,
+                    rightid=el.rightID,
+                    relationtypeid=el.relationTypeID,
+                    lefttype=el.leftType,
+                    righttype=el.rightType,
+                    tblid=el.tblid,
+                    tbltimestamp=el.tblTimeStamp
+                ))
+            bulk_mgr.done()
+
         if Object.objects.using('ihlp').count() == 0:
             PATH = BASE_DIR + '/notebooks/database/'
             objects = pd.read_csv(PATH + 'Object.csv', encoding='UTF-8', delimiter=';', dtype=str)

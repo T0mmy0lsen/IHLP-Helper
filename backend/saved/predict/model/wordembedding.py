@@ -15,8 +15,6 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from predict import config
-
 
 class Word2Vec(tf.keras.Model):
 
@@ -31,7 +29,7 @@ class Word2Vec(tf.keras.Model):
                                                            embedding_dim,
                                                            input_length=num_ns + 1)
 
-    def call(self, pair):
+    def call(self, **kwargs):
         target, context = pair
         if len(target.shape) == 2:
             target = tf.squeeze(target, axis=1)
@@ -44,6 +42,8 @@ class Word2Vec(tf.keras.Model):
 class WordEmbeddingLoader:
 
     def __init__(self, shared=None, dim=128, output_sequence_length=128):
+
+
 
         vectorizer = tf.keras.layers.TextVectorization(standardize=None, max_tokens=200000, output_sequence_length=output_sequence_length)
         text_ds = tf.data.Dataset.from_tensor_slices(np.concatenate((shared.x_train, shared.x_validate))).batch(128)
