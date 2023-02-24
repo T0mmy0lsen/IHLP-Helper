@@ -15,13 +15,15 @@ import tensorflow as tf
 
 def calculatePrediction(
         time=datetime.strptime("2022-02-01 00:00:00", "%Y-%m-%d %H:%M:%S"),
-        limit=1,
-        df=None
+        limit_days=1,
+        limit_minutes=0,
+        df=None,
+        should_delete=False,
 ):
     if df is None:
-        # TODO: Get a list of requests without predictions. Should be limited.
+
         # We limit the result set to be within the last n days from 'time'.
-        latest = time - timedelta(days=limit)
+        latest = time - timedelta(days=limit_days, minutes=limit_minutes)
 
         # The result should show all that does not have a solution and have been received after 'latest' and before 'time'.
         # Note that 'time' is used to simulate a different current time.
@@ -37,6 +39,9 @@ def calculatePrediction(
 
     if len(df) == 0:
         return False
+
+    if should_delete:
+        Predict.objects.filter(request_id__in=list(df.id.values)).delete()
 
     df_predictions = pd.DataFrame.from_records(Predict.objects.filter(request_id__in=list(df.id.values)).values('request_id'))
 
@@ -58,8 +63,6 @@ def calculatePrediction(
         return x
 
     df['text'] = df.apply(lambda x: text_combine_and_clean(x)[:512], axis=1)
-
-    # TODO: Use model to do predictions
 
     PATH_RELATIVE = './ihlp/notebooks'
 
@@ -114,7 +117,6 @@ def calculatePrediction(
         lst.sort(key=lambda x: x['prediction_log'], reverse=True)
         return lst
 
-    # TODO: Save predictions
     for i, el in df.iterrows():
         Predict(
             request_id=el.id,

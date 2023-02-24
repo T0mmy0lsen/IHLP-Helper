@@ -1,4 +1,5 @@
 import json
+import pandas as pd
 
 from django.http import HttpResponse, JsonResponse
 
@@ -13,7 +14,8 @@ from datetime import datetime
 
 from ihlp.management.jobs.prediction import calculatePrediction
 from ihlp.management.jobs.workload import calculateWorkload
-from ihlp.models import Feedback, WorkloadTotal
+from ihlp.models import Feedback, WorkloadTotal, Predict
+from ihlp.models_ihlp import Request
 
 
 @csrf_exempt
@@ -50,10 +52,19 @@ def request(request):
         limit = int(request.GET.get('limit', 0))
         text = request.GET.get('text', False)
 
-        if text.isdigit():
-            df = getRequest(int(text), limit=limit)
+        predict = predict == 'true'
+
+        if predict:
+            queryset_predicts = Predict.objects.order_by("-id")
+            if limit is not None:
+                queryset_predicts = queryset_predicts[:limit]
+            ids = [e['request_id'] for e in list(queryset_predicts.values())]
+            df = pd.DataFrame.from_records(Request.objects.using('ihlp').filter(id__in=ids).values())
         else:
-            df = getRequestLike(text, limit=limit)
+            if text.isdigit():
+                df = getRequest(int(text), limit=limit)
+            else:
+                df = getRequestLike(text, limit=limit)
 
         if len(df) == 0:
             return JsonResponse({
@@ -61,10 +72,6 @@ def request(request):
                 'length': 0,
                 'data': False
             }, safe=False)
-
-        if predict:
-            calculatePrediction(df=df)
-            calculateWorkload(df=df)
 
         df = getPredict(df)
 

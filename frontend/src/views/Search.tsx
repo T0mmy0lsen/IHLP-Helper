@@ -173,7 +173,6 @@ export default class Home extends React.Component<any, any> {
                                     limit: this.state.limit ? this.state.limit : 0,
                                     max_id: this.state.maxId ? this.state.maxId : 0,
                                     predict: !!checkboxPredict._data,
-                                    ignore: !!checkboxIgnore._data
                                 }
                             })
                         })
@@ -181,11 +180,14 @@ export default class Home extends React.Component<any, any> {
                             this.setState({workload: v.data.workload})
                             let data = v.data.data
                             if (data.length > 0) {
+                                console.log(data)
                                 let dataAltered: any[] = []
                                 data.forEach(r => {
                                     let tmp = r
                                     tmp.true_placement = r.workload.data.true_placement
                                     tmp.true_responsible = r.workload.data.true_responsible
+                                    // If Ignore is false, all data is taken
+                                    // If Ignore is true, neither placement og responsible can be set
                                     if (!checkboxIgnore._data || (tmp.true_placement == 'unknown' && tmp.true_responsible == 'unknown')) {
                                         dataAltered.push(tmp)
                                     }
@@ -393,14 +395,16 @@ export default class Home extends React.Component<any, any> {
         const search = getSearch();
         const section = new Section();
 
-        let checkboxPredict = new Switch().data(true).toggleTrue('');
-        let checkboxLatest = new Switch().data(true).toggleTrue('');
+        let checkboxPredict = new Switch().data(false).toggleTrue('');
         let checkboxIgnore = new Switch().data(false).toggleTrue('');
 
         let condition = new Conditions()
             .default(() => ({ value: undefined, loading: false }))
             .add(new ConditionsItem()
-                .condition((v: any) => !!v.data)
+                .condition((v: any) => {
+                    console.log(v)
+                    return !!v.data
+                })
                 .content((next, callback, main, args) => {
                     next(new Section()
                         .add(new Space().top(24))
@@ -418,16 +422,16 @@ export default class Home extends React.Component<any, any> {
         section.add(new Space().top(16));
         section.add(new Section().component(SelectLimit, false))
         section.add(new Section().component(() => <><div style={{ paddingTop: 4, paddingLeft: 0 }}>Limit the amount of results</div></>, false));
-        // section.add(new Space().top(16));
-        // section.add(new Section().component(SelectMaxId, false))
-        // section.add(new Section().component(() => <><div style={{ paddingTop: 4, paddingLeft: 0 }}>The max-id being considered by the search</div></>, false));
         section.add(new Space().top(16));
+
         section.add(checkboxPredict)
-        section.add(new Section().component(() => <><div style={{ paddingTop: 4, paddingLeft: 0 }}>Insure all results has predictions</div></>, false));
+        section.add(new Section().component(() => <><div style={{ paddingTop: 4, paddingLeft: 0 }}>Only search in prediction</div></>, false));
         section.add(new Space().top(16));
+
         section.add(checkboxIgnore)
         section.add(new Section().component(() => <><div style={{ paddingTop: 4, paddingLeft: 0 }}>Ignore all with placement or responsible</div></>, false));
         section.add(new Space().top(16));
+
         section.add(search);
         section.add(condition);
 

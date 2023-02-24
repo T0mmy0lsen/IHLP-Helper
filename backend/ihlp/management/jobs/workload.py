@@ -9,12 +9,15 @@ from datetime import datetime, timedelta
 
 def calculateWorkload(
         time=datetime.strptime("2022-02-01 00:00:00", "%Y-%m-%d %H:%M:%S"),
-        limit=1,
-        df=None
+        limit_days=1,
+        limit_minutes=0,
+        df=None,
+        should_delete=False,
 ):
     if df is None:
-        # We limit the result-set to be within the last n days from 'time'.
-        latest = time - timedelta(days=limit)
+
+        # We limit the result set to be within the last n days from 'time'.
+        latest = time - timedelta(days=limit_days, minutes=limit_minutes)
 
         queryset_requests = Request.objects.using('ihlp').filter(
             Q(receiveddate__lte=time) & Q(receiveddate__gte=latest)
@@ -27,6 +30,12 @@ def calculateWorkload(
     else:
         df = df[['id']]
 
+    if len(df) == 0:
+        return False
+
+    if should_delete:
+        Workload.objects.filter(request_id__in=list(df.id.values)).delete()
+
     # We get all prior predictions from the Request.id set. No need to predict twice (unless we change model).
     df_workloads = pd.DataFrame.from_records(
         Workload.objects.filter(request_id__in=list(df.id.values)).values('request_id'))
@@ -34,9 +43,6 @@ def calculateWorkload(
     if len(df_workloads) > 0:
         df = df[~df.id.isin(df_workloads.request_id.values)]
         df = df.reset_index()
-
-    if len(df) == 0:
-        return False
 
     # Here we join the needed data to retrieve current Responsible and/or ReceivedBy
     queryset_relations = Relation.objects.using('ihlp').filter(leftid__in=df.id.values)
@@ -73,39 +79,42 @@ def calculateWorkload(
     df = df.reset_index()
     df = df.fillna('unknown')
 
-    def get_placement(x):
-        if x['placement_1'] != 'unknown':
-            return x['placement_1'].lower()
-        if x['placement_2'] != 'unknown':
-            return x['placement_2'].lower()
-        if x['placement_3'] != 'unknown':
-            return x['placement_3'].lower()
-        if x['placement_4'] != 'unknown':
-            return x['placement_4'].lower()
-        return 'unknown'
+    def get_role(x, check, role):
+        user = 'unknown'
+        for el in check:
+            user_next = x[el].lower()
+            if user_next != 'unknown':
+                if user == 'unknown':
+                    user = user_next
+                elif user == 'it help line1':
+                    user = user_next
+        return user
 
-    def get_responsible(x):
-        if x['responsible_1'] != 'unknown':
-            return x['responsible_1'].lower()
-        if x['responsible_2'] != 'unknown':
-            return x['responsible_2'].lower()
-        if x['responsible_3'] != 'unknown':
-            return x['responsible_3'].lower()
-        if x['responsible_4'] != 'unknown':
-            return x['responsible_4'].lower()
-        return 'unknown'
+    check_placement = [x for x in df.columns if x[:9] == 'placement']
+    check_responsible = [x for x in df.columns if x[:11] == 'responsible']
 
-    df['placement'] = df.apply(lambda x: get_placement(x), axis=1)
-    df['responsible'] = df.apply(lambda x: get_responsible(x), axis=1)
+    check_placement.sort()
+    check_responsible.sort()
+
+    df['placement'] = df.apply(lambda x: get_role(x, check_placement, 'Placement'), axis=1)
+    df['responsible'] = df.apply(lambda x: get_role(x, check_responsible, 'Responsible'), axis=1)
     df = df[['id', 'placement', 'responsible']]
 
     for i, el in df.iterrows():
+
         p = Predict.objects.filter(request_id=el.id).first()
+        p_placement = []
+        p_responsible = []
+
+        if p:
+            p_placement = p.data['placement'][0:3]
+            p_responsible = p.data['responsible'][0:3]
+
         w = Workload(request_id=el.id, data={
             'true_placement': el.placement,
             'true_responsible': el.responsible,
-            'predict_placement': p.data['placement'][0:3],
-            'predict_responsible': p.data['responsible'][0:3],
+            'predict_placement': p_placement,
+            'predict_responsible': p_responsible,
         })
         w.save()
 

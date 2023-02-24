@@ -1,6 +1,6 @@
 import pandas as pd
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.db.models import Q
 
 from ihlp.management.jobs.prediction import calculatePrediction
@@ -10,19 +10,21 @@ from ihlp.models_ihlp import Request
 
 
 def createWorkloadTotal(
-        from_date=datetime.strptime("2022-02-01 00:00:00", "%Y-%m-%d %H:%M:%S"),
-        hard_limit=100,
-        predict=False
+        time=datetime.strptime("2022-02-01 00:00:00", "%Y-%m-%d %H:%M:%S"),
+        limit_days=1,
+        limit_minutes=0
 ):
+    # We limit the result set to be within the last n days from 'time'.
+    latest = time - timedelta(days=limit_days, minutes=limit_minutes)
+
     queryset_requests = Request.objects.using('ihlp').filter(
-        (Q(receiveddate__gte=from_date) | Q(receiveddate=None)) & Q(closingcode='0') & Q(solutiondate__isnull=True)).order_by('-id')[:hard_limit]
+        ((Q(receiveddate__lte=time) & Q(receiveddate__gte=latest)) | Q(receiveddate=None))
+        # & Q(closingcode='0')
+        # & Q(solutiondate__isnull=True)
+    ).order_by('-id')
 
     df = pd.DataFrame.from_records(queryset_requests.values())
     df = df.fillna('')
-
-    if predict:
-        calculatePrediction(df=df)
-        calculateWorkload(df=df)
 
     df_workloads = pd.DataFrame.from_records(
         Workload.objects.filter(request_id__in=list(df.id.values)).values('id', 'data'))

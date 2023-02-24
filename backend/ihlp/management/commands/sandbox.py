@@ -23,17 +23,27 @@ class Command(BaseCommand):
 
     def run(self):
 
-        # time = datetime.strptime("2022-03-01 00:00:00", "%Y-%m-%d %H:%M:%S")
-        # limit = 14
-        # df = None
+        time = datetime.strptime("2022-03-01 10:00:00", "%Y-%m-%d %H:%M:%S")
 
-        # calculatePrediction(time, limit, df)
-        # calculateWorkload(time, limit, df)
+        calculatePrediction(
+            time=time,
+            limit_days=0,
+            limit_minutes=60,
+            should_delete=True
+        )
 
-        # evaluateWorkloadWithUserPredictionAndSchedule(time=time, limit=limit, df=df)
-        # evaluate()
+        calculateWorkload(
+            time=time,
+            limit_days=0,
+            limit_minutes=120,
+            should_delete=True
+        )
 
-        createWorkloadTotal(hard_limit=2000, predict=True)
+        createWorkloadTotal(
+            time=time,
+            limit_days=14,
+            limit_minutes=0
+        )
 
 
 
