@@ -26,7 +26,6 @@ if settings.SECURE:
     def index(request):
         return render(request, 'index.html')
 else:
-    @ms_identity_web.login_required
     def index(request):
         return render(request, 'index.html')
 

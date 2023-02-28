@@ -179,7 +179,7 @@ REST_FRAMEWORK = {
     ),
 }
 
-AAD_CONFIG = AADConfig.parse_json(file_path='aad.config.json')
+AAD_CONFIG = AADConfig.parse_json(file_path='C:/IHLP/backend/aad.config.json')
 MS_IDENTITY_WEB = IdentityWebPython(AAD_CONFIG)
 ERROR_TEMPLATE = 'auth/{}.html'
 MIDDLEWARE.append('ms_identity_web.django.middleware.MsalMiddleware')
