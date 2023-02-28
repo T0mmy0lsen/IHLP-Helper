@@ -9,8 +9,8 @@ export default {
     config: {
         debug: isProd ? 0 : 1,
         drawer: { collapsed: false },
-        pathToApi: 'http://127.0.0.1:8000/ihlp',
-        pathToLogo: { src: '/logo192.png', height: 30, width: 30 },
+        pathToApi: isProd ? 'https://dispatchassistant.sdu.dk/ihlp' : 'http://127.0.0.1:8000/ihlp',
+        pathToLogo: undefined, // { src: '/logo192.png', height: 30, width: 30 },
         fallbackApi: 'http://localhost',
         fallbackApiOn: [404],
         defaultRoute: () => '/',
@@ -19,7 +19,7 @@ export default {
                 .addRowEnd([
                     new Typography()
                         .style({ marginTop: 1 })
-                        .label(`IHLP Helper`)
+                        .label(`IHLP Dispatch Assistant`)
                 ])
             );
         },

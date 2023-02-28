@@ -1,0 +1,8 @@
+<ul class="nav navbar-nav navbar-right">
+    {% if request.identity_context_data.authenticated %}
+    {% else %}
+        <li>
+            <a class="btn btn-success" href="{% url 'sign_in' %}">Sign In</a>
+        </li>
+    {% endif %}
+</ul>

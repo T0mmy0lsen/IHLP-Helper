@@ -3,7 +3,7 @@ import time
 
 from ihlp.management.jobs.workload_total import createWorkloadTotal
 
-os.add_dll_directory("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.4/bin")
+# os.add_dll_directory("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.4/bin")
 
 from datetime import datetime
 from django.core.management.base import BaseCommand
@@ -28,17 +28,22 @@ class Command(BaseCommand):
         calculatePrediction(
             time=time,
             limit_days=0,
-            limit_minutes=10,
-            should_delete=True
+            limit_minutes=5,
+            should_delete=False
         )
 
         calculateWorkload(
             time=time,
-            limit_days=0,
-            limit_minutes=60,
+            limit_days=1,
+            limit_minutes=0,
             should_delete=True
         )
 
+        createWorkloadTotal(
+            time=time,
+            limit_days=7,
+            limit_minutes=0
+        )
 
 
 

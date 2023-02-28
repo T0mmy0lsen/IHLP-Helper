@@ -13,12 +13,13 @@ from ihlp.controllers.request import getRequestLike, getRequest
 from ihlp.controllers.predict import getPredict
 from datetime import datetime
 
+from ms_identity_web.django.middleware import ms_identity_web
 from ihlp.management.jobs.prediction import calculatePrediction
 from ihlp.management.jobs.workload import calculateWorkload
 from ihlp.models import Feedback, WorkloadTotal, Predict
 from ihlp.models_ihlp import Request
 
-
+@ms_identity_web.login_required
 def index(request):
     return render(request, 'index.html')
 
