@@ -11,20 +11,26 @@ def calculateWorkload(
         time=datetime.strptime("2022-02-01 00:00:00", "%Y-%m-%d %H:%M:%S"),
         limit_days=1,
         limit_minutes=0,
+        limit_amount=0,
         df=None,
         should_delete=False,
 ):
     if df is None:
 
-        # We limit the result set to be within the last n days from 'time'.
-        latest = time - timedelta(days=limit_days, minutes=limit_minutes)
+        if limit_amount > 0:
+            queryset_requests = Request.objects.using('ihlp').order_by('-id')[:limit_amount]
+        else:
 
-        queryset_requests = Request.objects.using('ihlp').filter(
-            Q(receiveddate__lte=time) & Q(receiveddate__gte=latest)
-        )
+            # We limit the result set to be within the last n days from 'time'.
+            latest = time - timedelta(days=limit_days, minutes=limit_minutes)
+
+            queryset_requests = Request.objects.using('ihlp').filter(
+                Q(receiveddate__lte=time) & Q(receiveddate__gte=latest)
+            )
 
         # We limit the set to only Request.id
         df = pd.DataFrame.from_records(queryset_requests.values('id'))
+
         if len(df) == 0:
             return False
     else:

@@ -12,16 +12,20 @@ from ihlp.models_ihlp import Request
 def createWorkloadTotal(
         time=datetime.strptime("2022-02-01 00:00:00", "%Y-%m-%d %H:%M:%S"),
         limit_days=1,
-        limit_minutes=0
+        limit_minutes=0,
+        limit_amount=0
 ):
-    # We limit the result set to be within the last n days from 'time'.
-    latest = time - timedelta(days=limit_days, minutes=limit_minutes)
+    if limit_amount > 0:
+        queryset_requests = Request.objects.using('ihlp').order_by('-id')[:limit_amount]
+    else:
+        # We limit the result set to be within the last n days from 'time'.
+        latest = time - timedelta(days=limit_days, minutes=limit_minutes)
 
-    queryset_requests = Request.objects.using('ihlp').filter(
-        ((Q(receiveddate__lte=time) & Q(receiveddate__gte=latest)) | Q(receiveddate=None))
-        # & Q(closingcode='0')
-        # & Q(solutiondate__isnull=True)
-    ).order_by('-id')
+        queryset_requests = Request.objects.using('ihlp').filter(
+            ((Q(receiveddate__lte=time) & Q(receiveddate__gte=latest)) | Q(receiveddate=None))
+            # & Q(closingcode='0')
+            # & Q(solutiondate__isnull=True)
+        ).order_by('-id')
 
     df = pd.DataFrame.from_records(queryset_requests.values())
     df = df.fillna('')

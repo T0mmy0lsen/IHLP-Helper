@@ -184,11 +184,13 @@ export default class Home extends React.Component<any, any> {
                                 let dataAltered: any[] = []
                                 data.forEach(r => {
                                     let tmp = r
-                                    tmp.true_placement = r.workload.data.true_placement
-                                    tmp.true_responsible = r.workload.data.true_responsible
-                                    // If Ignore is false, all data is taken
-                                    // If Ignore is true, neither placement og responsible can be set
-                                    if (!checkboxIgnore._data || (tmp.true_placement == 'unknown' && tmp.true_responsible == 'unknown')) {
+                                    if (r.workload) {
+                                        tmp.true_placement = r.workload.data.true_placement
+                                        tmp.true_responsible = r.workload.data.true_responsible
+                                        if (!checkboxIgnore._data || (tmp.true_placement == 'unknown' && tmp.true_responsible == 'unknown')) {
+                                            dataAltered.push(tmp)
+                                        }
+                                    } else {
                                         dataAltered.push(tmp)
                                     }
                                 })
@@ -216,10 +218,14 @@ export default class Home extends React.Component<any, any> {
                 .headerPrepend(new ListHeader().key('id').title('Request').width('136px').searchable())
                 .headerPrepend(new ListHeader().key('subject').title('').searchable())
                 .headerPrepend(new ListHeader().key('placement_rate').title('').width('40px').render(
-                    (v, o) => <RateRender o={o} type='placement_rate'/>
+                    (v, o) => {
+                        if (!o.workload || o.workload.data.predict_placement.length == 0) return <></>
+                        return <RateRender o={o} type='placement_rate'/>
+                    }
                 ))
                 .headerPrepend(new ListHeader().key('placement').title('Placement').render(
                     (v, o) => {
+                        if (!o.workload || o.workload.data.predict_placement.length == 0) return <></>
 
                         let objects = [0, 1, 2].map(v => ({
                             name: o.workload.data.predict_placement[v].name,
@@ -243,7 +249,6 @@ export default class Home extends React.Component<any, any> {
                             // v.color = v.name == choice.name ? 'primary' : (v.value > limit_high ? '#52c41a' : (v.value < limit_low ? '#f5222d' : '#faad14'))
                             v.color = v.value > limit_high ? '#52c41a' : (v.value < limit_low ? '#f5222d' : '#faad14')
                         })
-
 
                         return <>
                             <Col>
@@ -273,10 +278,14 @@ export default class Home extends React.Component<any, any> {
                     }
                 ))
                 .headerPrepend(new ListHeader().key('responsible_rate').title('').width('40px').render(
-                    (v, o) => <RateRender o={o} type='responsible_rate'/>
+                    (v, o) => {
+                        if (!o.workload || o.workload.data.predict_responsible.length == 0) return <></>
+                        return <RateRender o={o} type='responsible_rate'/>
+                    }
                 ))
                 .headerPrepend(new ListHeader().key('responsible').title('Responsible').render(
                     (v, o) => {
+                        if (!o.workload || o.workload.data.predict_responsible.length == 0) return <></>
                         return <>
                             <Col>
                                 {
@@ -312,9 +321,39 @@ export default class Home extends React.Component<any, any> {
 
                     section.add(new Section().component(() => {
 
+                        if (!item._object.workload) {
+                            return <>
+                                <Descriptions layout="horizontal" size="small" bordered style={{marginLeft: 4, marginRight: 4}}>
+                                    <Descriptions.Item span={24} label={<></>}>
+                                        <div dangerouslySetInnerHTML={{__html: item._object.description}}/>
+                                    </Descriptions.Item>
+                                </Descriptions>
+                            </>
+                        }
+
                         let placement = item._object.workload.data.true_placement;
-                        let placement_log = item._object.predict.data.placement.find(e => e.name == placement)?.prediction_log ?? 0;
                         let responsible = item._object.workload.data.true_responsible;
+
+                        if (!item._object.predict) {
+                            return <>
+                                <Descriptions layout="horizontal" size="small" bordered style={{marginLeft: 4, marginRight: 4}}>
+                                    <Descriptions.Item span={12} label={<><div style={{opacity: .7}}>Placement</div></>} labelStyle={{width: 136}}>
+                                        { placement == 'unknown' ? '' :  placement }
+                                    </Descriptions.Item>
+                                    <Descriptions.Item span={12} label={<><div style={{opacity: .7}}>Responsible</div></>} labelStyle={{width: 136}}>
+                                        { responsible == 'unknown' ? '' :  responsible }
+                                    </Descriptions.Item>
+                                    <Descriptions.Item span={12} label={<><div style={{opacity: .7}}>Request</div></>} labelStyle={{width: 136}}>
+                                        { item._object.subject }
+                                    </Descriptions.Item>
+                                    <Descriptions.Item span={12} label={<></>}>
+                                        <div dangerouslySetInnerHTML={{__html: item._object.description}}/>
+                                    </Descriptions.Item>
+                                </Descriptions>
+                            </>
+                        }
+
+                        let placement_log = item._object.predict.data.placement.find(e => e.name == placement)?.prediction_log ?? 0;
                         let responsible_log = item._object.predict.data.responsible.find(e => e.name == responsible)?.prediction_log ?? 0;
                         let placement_color = placement_log > limit_high ? '#52c41a' : (placement_log < limit_low ? '#f5222d' : '#faad14')
                         let responsible_color = responsible_log > limit_high ? '#52c41a' : (responsible_log < limit_low ? '#f5222d' : '#faad14')
@@ -425,12 +464,12 @@ export default class Home extends React.Component<any, any> {
         section.add(new Space().top(16));
 
         section.add(checkboxPredict)
-        section.add(new Section().component(() => <><div style={{ paddingTop: 4, paddingLeft: 0 }}>Only search in prediction</div></>, false));
+        section.add(new Section().component(() => <><div style={{ paddingTop: 4, paddingLeft: 0 }}>Only latest predictions. Will ignore search text and recent Request.</div></>, false));
         section.add(new Space().top(16));
 
-        section.add(checkboxIgnore)
-        section.add(new Section().component(() => <><div style={{ paddingTop: 4, paddingLeft: 0 }}>Ignore all with placement or responsible</div></>, false));
-        section.add(new Space().top(16));
+        // section.add(checkboxIgnore)
+        // section.add(new Section().component(() => <><div style={{ paddingTop: 4, paddingLeft: 0 }}>Ignore all results with placement or responsible</div></>, false));
+        // section.add(new Space().top(16));
 
         section.add(search);
         section.add(condition);

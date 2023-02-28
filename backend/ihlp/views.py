@@ -77,6 +77,8 @@ def request(request):
             else:
                 df = getRequestLike(text, limit=limit)
 
+        df = df.sort_values("id", ascending=False)
+
         if len(df) == 0:
             return JsonResponse({
                 'text': text,

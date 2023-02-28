@@ -17,23 +17,30 @@ def calculatePrediction(
         time=datetime.strptime("2022-02-01 00:00:00", "%Y-%m-%d %H:%M:%S"),
         limit_days=1,
         limit_minutes=0,
+        limit_amount=0,
         df=None,
         should_delete=False,
 ):
     if df is None:
 
-        # We limit the result set to be within the last n days from 'time'.
-        latest = time - timedelta(days=limit_days, minutes=limit_minutes)
+        if limit_amount > 0:
+            queryset_requests = Request.objects.using('ihlp').order_by('-id')[:limit_amount]
+        else:
+            # We limit the result set to be within the last n days from 'time'.
+            latest = time - timedelta(days=limit_days, minutes=limit_minutes)
 
-        # The result should show all that does not have a solution and have been received after 'latest' and before 'time'.
-        # Note that 'time' is used to simulate a different current time.
-        queryset_requests = Request.objects.using('ihlp').filter(
-            Q(receiveddate__lte=time) & Q(receiveddate__gte=latest)
-        )
+            # The result should show all that does not have a solution and have been received after 'latest' and before 'time'.
+            # Note that 'time' is used to simulate a different current time.
+            queryset_requests = Request.objects.using('ihlp').filter(
+                Q(receiveddate__lte=time) & Q(receiveddate__gte=latest)
+            )
 
         # We can't write in the Request table, so we need to keep track of which has been predicted separately.
         # So we get all Request, and filter out those we already predicted.
         df = pd.DataFrame.from_records(queryset_requests.values('id', 'subject', 'description'))
+
+        if len(df) == 0:
+            return False
     else:
         df = df[['id', 'subject', 'description']]
 

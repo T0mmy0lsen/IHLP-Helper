@@ -21,7 +21,7 @@ SECRET_KEY = 'django-insecure-kkgh5r^)ert)+67#qcrfkr-5vhokf_z8&#^s7hi$w@a@n^e)r9
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-DEBUG_DATABASE = True
+PRODUCTION = False
 SECURE = False
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -80,7 +80,24 @@ WSGI_APPLICATION = 'app.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
-if DEBUG_DATABASE:
+if PRODUCTION:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        },
+        'ihlp': {
+            'ENGINE': 'mssql',
+            'NAME': 'SDU-IHLP-Prod',
+            'HOST': 'SDU-IHLPSQL0A.c.sdu.dk\\SDUIHLP',
+            'PORT': '2015',
+            'OPTIONS': {
+                'driver': 'ODBC Driver 17 for SQL Server',
+                'extra_params': 'TrustServerCertificate=yes'
+            }
+        },
+    }
+else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -96,23 +113,6 @@ if DEBUG_DATABASE:
             'OPTIONS': {
                 'charset': 'utf8mb4',
                 'init_command': "SET sql_mode='STRICT_TRANS_TABLES'; ALTER DATABASE request CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;",
-            }
-        },
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        },
-        'ihlp': {
-            'ENGINE': 'mssql',
-            'NAME': 'SDU-IHLP-Prod',
-            'HOST': 'SDU-IHLPSQL0A.c.sdu.dk\\SDUIHLP',
-            'PORT': '2015',
-            'OPTIONS': {
-                'driver': 'ODBC Driver 17 for SQL Server',
-                'extra_params': 'TrustServerCertificate=yes'
             }
         },
     }
@@ -152,10 +152,15 @@ USE_TZ = False
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
-STATIC_ROOT = 'C:/IHLP/static/'
+if PRODUCTION:
+    STATIC_ROOT = 'C:/IHLP/static/'
+else:
+    STATIC_ROOT = '../static/'
+
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     'C:/IHLP/frontend/build/static/',
+    'C:/Git/ihlp-helper/frontend/build/static/',
     'C:/Users/tool/git/ihlp-helper/frontend/build/static/',
 ]
 
@@ -179,7 +184,11 @@ REST_FRAMEWORK = {
     ),
 }
 
-AAD_CONFIG = AADConfig.parse_json(file_path='C:/IHLP/backend/aad.config.json')
+if PRODUCTION:
+    AAD_CONFIG = AADConfig.parse_json(file_path='C:/IHLP/backend/aad.config.json')
+else:
+    AAD_CONFIG = AADConfig.parse_json(file_path='aad.config.json')
+
 MS_IDENTITY_WEB = IdentityWebPython(AAD_CONFIG)
 ERROR_TEMPLATE = 'auth/{}.html'
 MIDDLEWARE.append('ms_identity_web.django.middleware.MsalMiddleware')
