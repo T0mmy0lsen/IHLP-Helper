@@ -19,10 +19,10 @@ class Communication(models.Model):
 
     class Meta:
         managed = False
-        if settings.DEBUG_DATABASE:
-            db_table = 'communication'
-        else:
+        if settings.PRODUCTION:
             db_table = 'tblCommunication'
+        else:
+            db_table = 'communication'
 
 
 class CommunicationHistory(models.Model):
@@ -35,10 +35,10 @@ class CommunicationHistory(models.Model):
 
     class Meta:
         managed = False
-        if settings.DEBUG_DATABASE:
-            db_table = 'communication_history'
-        else:
+        if settings.PRODUCTION:
             db_table = 'tblCommunicationHistory'
+        else:
+            db_table = 'communication_history'
 
 
 class Relation(models.Model):
@@ -52,10 +52,10 @@ class Relation(models.Model):
 
     class Meta:
         managed = False
-        if settings.DEBUG_DATABASE:
-            db_table = 'relation'
-        else:
+        if settings.PRODUCTION:
             db_table = 'tblRelation'
+        else:
+            db_table = 'relation'
 
 
 class Object(models.Model):
@@ -76,10 +76,10 @@ class Object(models.Model):
 
     class Meta:
         managed = False
-        if settings.DEBUG_DATABASE:
-            db_table = 'object'
-        else:
+        if settings.PRODUCTION:
             db_table = 'tblObject'
+        else:
+            db_table = 'object'
 
 
 class Request(models.Model):
@@ -120,10 +120,10 @@ class Request(models.Model):
 
     class Meta:
         managed = False
-        if settings.DEBUG_DATABASE:
-            db_table = 'request'
-        else:
+        if settings.PRODUCTION:
             db_table = 'tblRequest'
+        else:
+            db_table = 'request'
 
 
 class RelationHistory(models.Model):
@@ -139,10 +139,10 @@ class RelationHistory(models.Model):
 
     class Meta:
         managed = False
-        if settings.DEBUG_DATABASE:
-            db_table = 'relation_history'
-        else:
+        if settings.PRODUCTION:
             db_table = 'tblRelationHistory'
+        else:
+            db_table = 'relation_history'
 
 
 class ObjectHistory(models.Model):
@@ -164,10 +164,10 @@ class ObjectHistory(models.Model):
 
     class Meta:
         managed = False
-        if settings.DEBUG_DATABASE:
-            db_table = 'object_history'
-        else:
+        if settings.PRODUCTION:
             db_table = 'tblObjectHistory'
+        else:
+            db_table = 'object_history'
 
 
 class Item(models.Model):
@@ -194,7 +194,7 @@ class Item(models.Model):
 
     class Meta:
         managed = False
-        if settings.DEBUG_DATABASE:
-            db_table = 'item'
-        else:
+        if settings.PRODUCTION:
             db_table = 'tblItem'
+        else:
+            db_table = 'item'

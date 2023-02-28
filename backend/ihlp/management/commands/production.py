@@ -28,21 +28,24 @@ class Command(BaseCommand):
         calculatePrediction(
             time=time,
             limit_days=0,
-            limit_minutes=5,
+            limit_minutes=0,
+            limit_amount=100,
             should_delete=False
         )
 
         calculateWorkload(
             time=time,
-            limit_days=1,
+            limit_days=0,
             limit_minutes=0,
+            limit_amount=1000,
             should_delete=True
         )
 
         createWorkloadTotal(
             time=time,
-            limit_days=7,
-            limit_minutes=0
+            limit_days=0,
+            limit_minutes=0,
+            limit_amount=1000
         )
 
 
