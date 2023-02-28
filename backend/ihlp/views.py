@@ -2,6 +2,7 @@ import json
 import pandas as pd
 
 from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render
 
 # Create your views here.
 # python manage.py runserver
@@ -16,6 +17,10 @@ from ihlp.management.jobs.prediction import calculatePrediction
 from ihlp.management.jobs.workload import calculateWorkload
 from ihlp.models import Feedback, WorkloadTotal, Predict
 from ihlp.models_ihlp import Request
+
+
+def index(request):
+    return render(request, 'index.html')
 
 
 @csrf_exempt
