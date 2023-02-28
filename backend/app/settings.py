@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
 from pathlib import Path
+from ms_identity_web.configuration import AADConfig
+from ms_identity_web import IdentityWebPython
 
 # SECURITY WARNING: keep the secret key used in production secret!
 
@@ -18,7 +20,7 @@ SECRET_KEY = 'django-insecure-kkgh5r^)ert)+67#qcrfkr-5vhokf_z8&#^s7hi$w@a@n^e)r9
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-DEBUG_DATABASE = False
+DEBUG_DATABASE = True
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -57,7 +59,7 @@ ROOT_URLCONF = 'app.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': ['C:/IHLP/frontend/build'],
+        'DIRS': ['C:/IHLP/frontend/build', 'C:/Users/tool/git/ihlp-helper/frontend/build'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -148,10 +150,11 @@ USE_TZ = False
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
-STATIC_ROOT='C:/IHLP/static/'
+STATIC_ROOT = 'C:/IHLP/static/'
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [
-    'C:/IHLP/frontend/build/static/'
+    'C:/IHLP/frontend/build/static/',
+    'C:/Users/tool/git/ihlp-helper/frontend/build/static/',
 ]
 
 # Default primary key field type
@@ -174,4 +177,7 @@ REST_FRAMEWORK = {
     ),
 }
 
-# BOOT = Boot(debug=False)
+AAD_CONFIG = AADConfig.parse_json(file_path='aad.config.json')
+MS_IDENTITY_WEB = IdentityWebPython(AAD_CONFIG)
+ERROR_TEMPLATE = 'auth/{}.html'
+MIDDLEWARE.append('ms_identity_web.django.middleware.MsalMiddleware')
