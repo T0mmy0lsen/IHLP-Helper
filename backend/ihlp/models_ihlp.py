@@ -9,6 +9,7 @@
 # https://dev.to/idrisrampurawala/creating-django-models-of-an-existing-db-288m
 
 from django.db import models
+from django.conf import settings
 
 class Communication(models.Model):
 
@@ -18,7 +19,10 @@ class Communication(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'communication'
+        if settings.DEBUG_DATABASE:
+            db_table = 'communication'
+        else:
+            db_table = 'tblCommunication'
 
 
 class CommunicationHistory(models.Model):
@@ -31,7 +35,10 @@ class CommunicationHistory(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'communication_history'
+        if settings.DEBUG_DATABASE:
+            db_table = 'communication_history'
+        else:
+            db_table = 'tblCommunicationHistory'
 
 
 class Relation(models.Model):
@@ -45,21 +52,10 @@ class Relation(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'relation'
-
-
-class RelationExportTasktype(models.Model):
-
-    id = models.PositiveBigIntegerField(blank=True, primary_key=True)
-    leftid = models.PositiveBigIntegerField(db_column='leftId', blank=True, null=True)
-    rightid = models.PositiveBigIntegerField(db_column='rightId', blank=True, null=True)
-    relationtypeid = models.IntegerField(db_column='relationTypeID', blank=True, null=True)
-    lefttype = models.CharField(db_column='leftType', max_length=100, blank=True, null=True)
-    righttype = models.CharField(db_column='rightType', max_length=100, blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'relation_export_tasktype'
+        if settings.DEBUG_DATABASE:
+            db_table = 'relation'
+        else:
+            db_table = 'tblRelation'
 
 
 class Object(models.Model):
@@ -80,7 +76,10 @@ class Object(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'object'
+        if settings.DEBUG_DATABASE:
+            db_table = 'object'
+        else:
+            db_table = 'tblObject'
 
 
 class Request(models.Model):
@@ -121,7 +120,10 @@ class Request(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'request'
+        if settings.DEBUG_DATABASE:
+            db_table = 'request'
+        else:
+            db_table = 'tblRequest'
 
 
 class RelationHistory(models.Model):
@@ -137,7 +139,10 @@ class RelationHistory(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'relation_history'
+        if settings.DEBUG_DATABASE:
+            db_table = 'relation_history'
+        else:
+            db_table = 'tblRelationHistory'
 
 
 class ObjectHistory(models.Model):
@@ -159,7 +164,10 @@ class ObjectHistory(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'object_history'
+        if settings.DEBUG_DATABASE:
+            db_table = 'object_history'
+        else:
+            db_table = 'tblObjectHistory'
 
 
 class Item(models.Model):
@@ -186,4 +194,7 @@ class Item(models.Model):
 
     class Meta:
         managed = False
-        db_table = 'item'
+        if settings.DEBUG_DATABASE:
+            db_table = 'item'
+        else:
+            db_table = 'tblItem'

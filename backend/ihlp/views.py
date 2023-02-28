@@ -19,9 +19,16 @@ from ihlp.management.jobs.workload import calculateWorkload
 from ihlp.models import Feedback, WorkloadTotal, Predict
 from ihlp.models_ihlp import Request
 
-@ms_identity_web.login_required
-def index(request):
-    return render(request, 'index.html')
+from django.conf import settings
+
+if settings.SECURE:
+    @ms_identity_web.login_required
+    def index(request):
+        return render(request, 'index.html')
+else:
+    @ms_identity_web.login_required
+    def index(request):
+        return render(request, 'index.html')
 
 
 @csrf_exempt
@@ -46,7 +53,6 @@ def message(request):
         ).save()
 
     return what(request)
-
 
 @csrf_exempt
 @api_view(['GET'])
