@@ -3,6 +3,7 @@ from datetime import timedelta, datetime
 
 import bs4 as bs4
 import numpy as np
+from django.conf import settings
 from django.db.models import Q
 
 from ihlp.models import Predict
@@ -71,9 +72,7 @@ def calculatePrediction(
 
     df['text'] = df.apply(lambda x: text_combine_and_clean(x)[:512], axis=1)
 
-    PATH_RELATIVE = './ihlp/notebooks'
-
-    tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
+    tokenizer = AutoTokenizer.from_pretrained(f'{settings.BASE_DIR}/ihlp/notebooks/data/models/XLM-RoBERTa-Tokenizer')
 
     def tokenize_texts(sentences, max_length=512, padding='max_length'):
         return tokenizer(
@@ -86,20 +85,20 @@ def calculatePrediction(
 
     tokenized_text = dict(tokenize_texts(list(df.text.values)))
 
-    model_responsible = TFAutoModelForSequenceClassification.from_pretrained(f'{PATH_RELATIVE}/data/models/IHLP-XLM-RoBERTa-Responsible')
+    model_responsible = TFAutoModelForSequenceClassification.from_pretrained(f'{settings.BASE_DIR}/ihlp/notebooks/data/models/IHLP-XLM-RoBERTa-Responsible')
     model_responsible.compile(metrics=[tf.keras.metrics.SparseTopKCategoricalAccuracy(k=5)])
     predict_responsible = model_responsible.predict(tokenized_text, batch_size=1, verbose=False)
 
-    df_label_responsible = pd.read_csv(f'{PATH_RELATIVE}/data/label_responsible.csv')
+    df_label_responsible = pd.read_csv(f'{settings.BASE_DIR}/ihlp/notebooks/data/label_responsible.csv')
     df_tmp_responsible = df_label_responsible.drop_duplicates(subset=['label_responsible', 'label_encoded'])
     df_tmp_responsible = df_tmp_responsible.sort_values(by='label_encoded')
     responsible_index = df_tmp_responsible.label_responsible.values
 
-    model_placement = TFAutoModelForSequenceClassification.from_pretrained(f'{PATH_RELATIVE}/data/models/IHLP-XLM-RoBERTa-Placement')
+    model_placement = TFAutoModelForSequenceClassification.from_pretrained(f'{settings.BASE_DIR}/ihlp/notebooks/data/models/IHLP-XLM-RoBERTa-Placement')
     model_placement.compile(metrics=[tf.keras.metrics.SparseTopKCategoricalAccuracy(k=5)])
     predict_placement = model_placement.predict(tokenized_text, batch_size=1, verbose=False)
 
-    df_label_placement = pd.read_csv(f'{PATH_RELATIVE}/data/label_placement.csv')
+    df_label_placement = pd.read_csv(f'{settings.BASE_DIR}/ihlp/notebooks/data/label_placement.csv')
     df_tmp_placement = df_label_placement.drop_duplicates(subset=['label_placement', 'label_encoded'])
     df_tmp_placement = df_tmp_placement.sort_values(by='label_encoded')
     placement_index = df_tmp_placement.label_placement.values
