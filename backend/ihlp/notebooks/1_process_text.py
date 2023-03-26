@@ -23,7 +23,7 @@ print('Length:', len(df))
 
 # Filter out for evaluation.
 df.receivedDate = pd.to_datetime(df.receivedDate)
-df = df[df['receivedDate'] < datetime.strptime("2022-11-01 00:00:00", "%Y-%m-%d %H:%M:%S")]
+df = df[df['receivedDate'] < datetime.strptime("2023-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")]
 df = df.fillna('')
 print('Length:', len(df))
 
