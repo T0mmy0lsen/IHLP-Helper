@@ -1,7 +1,7 @@
 import os
 from ast import literal_eval
 
-os.add_dll_directory("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.4/bin")
+# os.add_dll_directory("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.4/bin")
 
 import numpy as np
 import pandas as pd

@@ -14,43 +14,19 @@ import tensorflow as tf
 
 
 def calculatePrediction(
-        time=datetime.strptime("2022-02-01 00:00:00", "%Y-%m-%d %H:%M:%S"),
-        limit_days=1,
-        limit_minutes=0,
-        limit_amount=0,
-        df=None,
-        should_delete=False,
+        amount=0,
+        delete=False,
 ):
-    if df is None:
+    queryset_requests = Request.objects.using('ihlp').order_by('-id')[:amount]
 
-        if limit_amount > 0:
-            queryset_requests = Request.objects.using('ihlp').order_by('-id')[:limit_amount]
-        else:
-            # We limit the result set to be within the last n days from 'time'.
-            latest = time - timedelta(days=limit_days, minutes=limit_minutes)
+    df = pd.DataFrame.from_records(queryset_requests.values('id', 'subject', 'description'))
 
-            # The result should show all that does not have a solution and have been received after 'latest' and before 'time'.
-            # Note that 'time' is used to simulate a different current time.
-            queryset_requests = Request.objects.using('ihlp').filter(
-                Q(receiveddate__lte=time) & Q(receiveddate__gte=latest)
-            )
-
-        # We can't write in the Request table, so we need to keep track of which has been predicted separately.
-        # So we get all Request, and filter out those we already predicted.
-        df = pd.DataFrame.from_records(queryset_requests.values('id', 'subject', 'description'))
-
-        if len(df) == 0:
-            return False
-    else:
-        df = df[['id', 'subject', 'description']]
-
-    if len(df) == 0:
-        return False
-
-    if should_delete:
+    if delete:
         Predict.objects.filter(request_id__in=list(df.id.values)).delete()
 
-    df_predictions = pd.DataFrame.from_records(Predict.objects.filter(request_id__in=list(df.id.values)).values('request_id'))
+    df_predictions = pd.DataFrame.from_records(
+        Predict.objects.filter(request_id__in=list(df.id.values)).values('request_id')
+    )
 
     if len(df_predictions) > 0:
         df = df[~df.id.isin(df_predictions.request_id.values)]
@@ -104,6 +80,12 @@ def calculatePrediction(
     df_tmp_placement = df_tmp_placement.sort_values(by='label_encoded')
     placement_index = df_tmp_placement.label_placement.values
 
+    model_time_consumption = TFAutoModelForSequenceClassification.from_pretrained(f'{PATH_RELATIVE}/data/models/IHLP-XLM-RoBERTa-Time-Consumption')
+    output_layer = tf.keras.layers.Dense(units=1, activation='linear')
+    model_time_consumption.classifier = output_layer
+    model_time_consumption.compile()
+    predict_time_consumption = model_time_consumption.predict(tokenized_text, batch_size=1, verbose=False)
+
     def get_responsible_as_list(predictions):
         lst = []
         for i, val in enumerate(predictions):
@@ -128,6 +110,7 @@ def calculatePrediction(
         Predict(
             request_id=el.id,
             data={
+                'time_consumption': predict_time_consumption,
                 'responsible': get_responsible_as_list(predict_responsible[0][i]),
                 'placement': get_placement_as_list(predict_placement[0][i]),
             }
