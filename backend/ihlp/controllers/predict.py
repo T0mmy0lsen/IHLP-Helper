@@ -1,6 +1,6 @@
 from django.forms import model_to_dict
 
-from ihlp.models import Workload, Predict
+from ihlp.models import Predict, Responsible
 
 
 def setPredict(_):
@@ -15,13 +15,13 @@ def getPredict(df):
             return False
         return model_to_dict(p)
 
-    def applyGetWorkload(x):
-        w = Workload.objects.filter(request_id=x['id']).first()
+    def applyGetResponsible(x):
+        w = Responsible.objects.filter(request_id=x['id']).first()
         if w is None:
             return False
         return model_to_dict(w)
 
     df['predict'] = df.apply(lambda x: applyGetPredict(x), axis=1)
-    df['workload'] = df.apply(lambda x: applyGetWorkload(x), axis=1)
+    df['responsible'] = df.apply(lambda x: applyGetResponsible(x), axis=1)
 
     return df

@@ -184,9 +184,9 @@ export default class Home extends React.Component<any, any> {
                                 let dataAltered: any[] = []
                                 data.forEach(r => {
                                     let tmp = r
-                                    if (r.workload) {
-                                        tmp.true_placement = r.workload.data.true_placement
-                                        tmp.true_responsible = r.workload.data.true_responsible
+                                    if (r.responsible) {
+                                        tmp.true_placement = r.responsible.data.true_placement
+                                        tmp.true_responsible = r.responsible.data.true_responsible
                                         if (!checkboxIgnore._data || (tmp.true_placement == 'unknown' && tmp.true_responsible == 'unknown')) {
                                             dataAltered.push(tmp)
                                         }
@@ -219,17 +219,17 @@ export default class Home extends React.Component<any, any> {
                 .headerPrepend(new ListHeader().key('subject').title('').searchable())
                 .headerPrepend(new ListHeader().key('placement_rate').title('').width('40px').render(
                     (v, o) => {
-                        if (!o.workload || o.workload.data.predict_placement.length == 0) return <></>
+                        if (!o.responsible || o.responsible.data.predict_placement.length == 0) return <></>
                         return <RateRender o={o} type='placement_rate'/>
                     }
                 ))
                 .headerPrepend(new ListHeader().key('placement').title('Placement').render(
                     (v, o) => {
-                        if (!o.workload || o.workload.data.predict_placement.length == 0) return <></>
+                        if (!o.responsible || o.responsible.data.predict_placement.length == 0) return <></>
 
                         let objects = [0, 1, 2].map(v => ({
-                            name: o.workload.data.predict_placement[v].name,
-                            value: o.workload.data.predict_placement[v].prediction_log,
+                            name: o.responsible.data.predict_placement[v].name,
+                            value: o.responsible.data.predict_placement[v].prediction_log,
                             color: '',
                             workload: 0,
                         }));
@@ -279,19 +279,19 @@ export default class Home extends React.Component<any, any> {
                 ))
                 .headerPrepend(new ListHeader().key('responsible_rate').title('').width('40px').render(
                     (v, o) => {
-                        if (!o.workload || o.workload.data.predict_responsible.length == 0) return <></>
+                        if (!o.responsible || o.responsible.data.predict_responsible.length == 0) return <></>
                         return <RateRender o={o} type='responsible_rate'/>
                     }
                 ))
                 .headerPrepend(new ListHeader().key('responsible').title('Responsible').render(
                     (v, o) => {
-                        if (!o.workload || o.workload.data.predict_responsible.length == 0) return <></>
+                        if (!o.responsible || o.responsible.data.predict_responsible.length == 0) return <></>
                         return <>
                             <Col>
                                 {
                                     [0, 1, 2].map(v => {
-                                        let name = o.workload.data.predict_responsible[v].name;
-                                        let value = o.workload.data.predict_responsible[v].prediction_log
+                                        let name = o.responsible.data.predict_responsible[v].name;
+                                        let value = o.responsible.data.predict_responsible[v].prediction_log
                                         let color = value > limit_high ? '#52c41a' : (value < limit_low ? '#f5222d' : '#faad14')
                                         return <Row>
                                             <Col>
@@ -321,7 +321,7 @@ export default class Home extends React.Component<any, any> {
 
                     section.add(new Section().component(() => {
 
-                        if (!item._object.workload) {
+                        if (!item._object.responsible) {
                             return <>
                                 <Descriptions layout="horizontal" size="small" bordered style={{marginLeft: 4, marginRight: 4}}>
                                     <Descriptions.Item span={24} label={<></>}>
@@ -331,8 +331,8 @@ export default class Home extends React.Component<any, any> {
                             </>
                         }
 
-                        let placement = item._object.workload.data.true_placement;
-                        let responsible = item._object.workload.data.true_responsible;
+                        let placement = item._object.responsible.data.true_placement;
+                        let responsible = item._object.responsible.data.true_responsible;
 
                         if (!item._object.predict) {
                             return <>

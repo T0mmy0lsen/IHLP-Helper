@@ -14,23 +14,22 @@ class Predict(models.Model):
         return "Predict: " + str(self.request_id)
 
 
-class Workload(models.Model):
+class Responsible(models.Model):
 
     request_id = models.IntegerField()
-    username = models.CharField(max_length=100, blank=True, null=True)
     data = JSONField()
 
     def __str__(self):
-        return "Workload: " + str(self.request_id)
+        return "Responsible: " + str(self.request_id)
 
 
-class WorkloadTotal(models.Model):
+class Workload(models.Model):
 
     id = models.AutoField(primary_key=True)
     data = JSONField()
 
     def __str__(self):
-        return "WorkloadTotal: " + str(self.id)
+        return "Workload: " + str(self.id)
 
 
 class Feedback(models.Model):

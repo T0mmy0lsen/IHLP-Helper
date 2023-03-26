@@ -6,17 +6,15 @@ from django.shortcuts import render
 
 # Create your views here.
 # python manage.py runserver
+
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view
 
 from ihlp.controllers.request import getRequestLike, getRequest
 from ihlp.controllers.predict import getPredict
-from datetime import datetime
 
 from ms_identity_web.django.middleware import ms_identity_web
-from ihlp.management.jobs.prediction import calculatePrediction
-from ihlp.management.jobs.workload import calculateWorkload
-from ihlp.models import Feedback, WorkloadTotal, Predict
+from ihlp.models import Feedback, Predict, Workload
 from ihlp.models_ihlp import Request
 
 from django.conf import settings
@@ -95,7 +93,7 @@ def request(request):
             'text': text,
             'length': len(df),
             'data': parsed,
-            'workload': WorkloadTotal.objects.order_by('-id')[0].data
+            'workload': Workload.objects.order_by('-id')[0].data
         }, safe=False)
 
     return what(request)
