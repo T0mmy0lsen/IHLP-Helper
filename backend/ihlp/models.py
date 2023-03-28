@@ -17,6 +17,10 @@ class Predict(models.Model):
 class Responsible(models.Model):
 
     request_id = models.IntegerField()
+    true_placement = models.CharField(max_length=100, blank=True, null=True)
+    true_responsible = models.CharField(max_length=100, blank=True, null=True)
+    true_timeconsumption = models.IntegerField(default=True)
+    true_deadline = models.DateTimeField(blank=True, null=True)
     data = JSONField()
 
     def __str__(self):

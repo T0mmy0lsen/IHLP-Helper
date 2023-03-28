@@ -1,5 +1,6 @@
 import json
 import pandas as pd
+from django.forms import model_to_dict
 
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
@@ -14,7 +15,7 @@ from ihlp.controllers.request import getRequestLike, getRequest
 from ihlp.controllers.predict import getPredict
 
 from ms_identity_web.django.middleware import ms_identity_web
-from ihlp.models import Feedback, Predict, Workload
+from ihlp.models import Feedback, Predict, Workload, Responsible
 from ihlp.models_ihlp import Request
 
 from django.conf import settings
@@ -50,6 +51,7 @@ def message(request):
         ).save()
 
     return what(request)
+
 
 @csrf_exempt
 @api_view(['GET'])
@@ -94,6 +96,45 @@ def request(request):
             'length': len(df),
             'data': parsed,
             'workload': Workload.objects.order_by('-id')[0].data
+        }, safe=False)
+
+    return what(request)
+
+
+@csrf_exempt
+@api_view(['GET'])
+def placement(request):
+
+    if request.method == 'GET':
+
+        return JsonResponse({
+            'data': Predict.objects.order_by('-id')[0].data,
+        }, safe=False)
+
+    return what(request)
+
+
+@csrf_exempt
+@api_view(['GET'])
+def schedule(request):
+
+    if request.method == 'GET':
+
+        param = request.GET.get('placement', '?')
+
+        responsibles = list(Responsible.objects.filter(true_placement=param).all().values())
+
+        def applyGetRequest(x):
+            p = Request.objects.using('ihlp').filter(id=x['request_id']).first()
+            if p is None:
+                return False
+            return model_to_dict(p)
+
+        for res in responsibles:
+            res['request'] = applyGetRequest(res)
+
+        return JsonResponse({
+            'data': responsibles,
         }, safe=False)
 
     return what(request)

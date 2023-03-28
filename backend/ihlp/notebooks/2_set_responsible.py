@@ -59,7 +59,7 @@ if not HAS_CACHE_DATA:
 
     df_o = pd.merge(df_r, df_objects, left_on='relationId', right_on='objectId', how='inner')
     df_o = pd.merge(df_o, df_objects, left_on='rightID', right_on='objectId', how='inner')
-    # df_o = df_o[(df_o.name_x.str.contains('Placement')) | (df_o.name_x.str.contains('Responsible'))]
+    df_o = df_o[(df_o.name_x.str.contains('Placement')) | (df_o.name_x.str.contains('Responsible'))]
 
     PATH_ITEMS = 'database/Item.csv'
 
@@ -75,6 +75,12 @@ if not HAS_CACHE_DATA:
     df_i = df_i.sort_values(by=['id_y'])
 
     cc = df_i.groupby(['leftID']).cumcount() + 1
+
+    print("df_i shape:", df_i.shape)
+    print("leftID unique values:", len(df_i['leftID'].unique()))
+    print("cc unique values:", len(cc.unique()))
+    print("df_i data types:", df_i.dtypes)
+
     df = df_i.set_index(['leftID', cc]).unstack().sort_index(1, level=1)
     df.columns = ['_'.join(map(str, i)) for i in df.columns]
     df.reset_index()
@@ -120,10 +126,8 @@ def get_labels(labels):
 df = pd.read_csv('data/label_users.csv', dtype=str)
 df['id'] = df['id'].astype(int)
 df = df.sort_values(by='id')
+df = df.fillna('')
 df_latest = df[-25000:]
-
-df_for_timeconsumption = df[df.label_timeconsumption != '']
-df_for_timeconsumption['label_encoded'] = df_for_timeconsumption.label_timeconsumption
 
 df_for_placement = df_latest[df_latest.label_placement != 'unknown']
 top_list_label_placement = df_for_placement.label_placement.value_counts().index.tolist()[:250]
@@ -138,6 +142,14 @@ df_for_placement['label_encoded'] = label_encoder_for_placement.transform(df_for
 df_for_responsible = df[df.label_responsible.isin(top_list_label_responsible)]
 label_encoder_for_responsible = get_labels(top_list_label_responsible)
 df_for_responsible['label_encoded'] = label_encoder_for_responsible.transform(df_for_responsible.label_responsible)
+
+df_for_timeconsumption = df[df.label_timeconsumption.apply(lambda x: x.isdigit())]
+df_for_timeconsumption = df_for_timeconsumption[df_for_timeconsumption['label_timeconsumption'] != '']
+df_for_timeconsumption['label_timeconsumption'] = df_for_timeconsumption['label_timeconsumption'].astype(int)
+df_for_timeconsumption = df_for_timeconsumption[df_for_timeconsumption.id.isin(df_for_placement.id.values)]
+df_for_timeconsumption = df_for_timeconsumption[df_for_timeconsumption['label_timeconsumption'] < 121]
+df_for_timeconsumption = df_for_timeconsumption[df_for_timeconsumption['label_timeconsumption'] != 0]
+df_for_timeconsumption['label_encoded'] = df_for_timeconsumption.label_timeconsumption
 
 df_for_placement[['id', 'label_placement', 'label_encoded']].to_csv('data/label_placement.csv', index=False)
 df_for_responsible[['id', 'label_responsible', 'label_encoded']].to_csv('data/label_responsible.csv', index=False)

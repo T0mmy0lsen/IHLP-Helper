@@ -1,7 +1,8 @@
 import {Main, Button, Action, Typography, Route, Sider, Section, Get} from 'react-antd-admin-panel';
-import {faSearch} from "@fortawesome/free-solid-svg-icons";
+import {faSearch, faTable} from "@fortawesome/free-solid-svg-icons";
 import Error from "./views/Error";
 import Search from "./views/Search";
+import Schedule from "./views/Schedule";
 
 let isProd = process.env.NODE_ENV === 'production';
 
@@ -46,6 +47,9 @@ export default {
         new Route().key('/')
             .exact()
             .component(Search),
+        new Route().key('/schedule')
+            .exact()
+            .component(Schedule),
         new Route().key('/error')
             .exact()
             .component(Error),
@@ -54,6 +58,8 @@ export default {
         next(new Section().add(new Sider()
             .add(new Button().access(true)
                 .action(new Action().route(() => '/').label('Search').fontawesome(faSearch)))
+            .add(new Button().access(true)
+                .action(new Action().route(() => '/schedule').label('Schedule').fontawesome(faTable)))
         ));
     },
 }
