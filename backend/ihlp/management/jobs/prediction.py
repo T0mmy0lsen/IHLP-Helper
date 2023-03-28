@@ -8,10 +8,23 @@ from django.db.models import Q
 
 from ihlp.models import Predict
 from ihlp.models_ihlp import Request
-from transformers import TFAutoModelForSequenceClassification, AutoTokenizer
+from transformers import TFAutoModelForSequenceClassification, AutoTokenizer, TFXLMRobertaForSequenceClassification, \
+    TFAutoModel, AutoConfig, TFXLMRobertaPreTrainedModel
 
 import pandas as pd
 import tensorflow as tf
+
+
+class CustomModel(tf.keras.Model):
+    def __init__(self, base_model):
+        super(CustomModel, self).__init__()
+        self.base_model = base_model
+        self.output_layer = tf.keras.layers.Dense(units=1, activation='linear')
+
+    def call(self, inputs, **args):
+        x = self.base_model(inputs)
+        x = self.output_layer(x[0])
+        return x
 
 
 def calculatePrediction(
@@ -48,7 +61,8 @@ def calculatePrediction(
 
     df['text'] = df.apply(lambda x: text_combine_and_clean(x)[:512], axis=1)
 
-    tokenizer = AutoTokenizer.from_pretrained(f'{settings.BASE_DIR}/ihlp/notebooks/data/models/XLM-RoBERTa-Tokenizer')
+    # tokenizer = AutoTokenizer.from_pretrained(f'{settings.BASE_DIR}/ihlp/notebooks/data/models/XLM-RoBERTa-Tokenizer')
+    tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
 
     def tokenize_texts(sentences, max_length=512, padding='max_length'):
         return tokenizer(
@@ -79,11 +93,10 @@ def calculatePrediction(
     df_tmp_placement = df_tmp_placement.sort_values(by='label_encoded')
     placement_index = df_tmp_placement.label_placement.values
 
-    model_time_consumption = TFAutoModelForSequenceClassification.from_pretrained(f'{PATH_RELATIVE}/data/models/IHLP-XLM-RoBERTa-Time-Consumption')
-    output_layer = tf.keras.layers.Dense(units=1, activation='linear')
-    model_time_consumption.classifier = output_layer
-    model_time_consumption.compile()
-    predict_time_consumption = model_time_consumption.predict(tokenized_text, batch_size=1, verbose=False)
+    model_path = 'C:/Git/ihlp-helper/backend/ihlp/notebooks/data/models/IHLP-XLM-RoBERTa-Time-Consumption'
+    model = TFAutoModelForSequenceClassification.from_pretrained(model_path)
+
+    predict_time_consumption = model.predict(tokenized_text, batch_size=1, verbose=False)
 
     def get_responsible_as_list(predictions):
         lst = []
@@ -105,11 +118,15 @@ def calculatePrediction(
         lst.sort(key=lambda x: x['prediction_log'], reverse=True)
         return lst
 
+    def inverse_min_max_scaling(scaled_data, original_min=1, original_max=120, new_min=-1, new_max=1):
+        return ((scaled_data - new_min) * (original_max - original_min)) / (new_max - new_min) + original_min
+
+    print('Predict, saving:', len(df))
     for i, el in df.iterrows():
         Predict(
             request_id=el.id,
             data={
-                'time_consumption': predict_time_consumption,
+                'timeconsumption': predict_time_consumption[0][i],  # inverse_min_max_scaling(predict_time_consumption[0][i]),  # 120, # original_predictions,
                 'responsible': get_responsible_as_list(predict_responsible[0][i]),
                 'placement': get_placement_as_list(predict_placement[0][i]),
             }

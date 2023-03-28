@@ -11,13 +11,9 @@ def calculateResponsibles(
         amount=0,
         delete=False,
 ):
-
     queryset_requests = Request.objects.using('ihlp').order_by('-id')[:amount]
 
-    df = pd.DataFrame.from_records(queryset_requests.values('id'))
-
-    if len(df) == 0:
-        return False
+    df = pd.DataFrame.from_records(queryset_requests.values('id', 'timeconsumption', 'deadline'))
 
     if delete:
         Responsible.objects.filter(request_id__in=list(df.id.values)).delete()
@@ -29,6 +25,9 @@ def calculateResponsibles(
     if len(df_responsible) > 0:
         df = df[~df.id.isin(df_responsible.request_id.values)]
         df = df.reset_index()
+
+    df_timeconsumption = df[['id', 'timeconsumption', 'deadline']]
+    df_timeconsumption = df_timeconsumption.fillna(0)
 
     # Here we join the needed data to retrieve current Responsible and/or ReceivedBy
     queryset_relations = Relation.objects.using('ihlp').filter(leftid__in=df.id.values)
@@ -84,66 +83,44 @@ def calculateResponsibles(
 
     df['placement'] = df.apply(lambda x: get_role(x, check_placement), axis=1)
     df['responsible'] = df.apply(lambda x: get_role(x, check_responsible), axis=1)
-    df = df[['id', 'placement', 'responsible']]
-
-
-    df = pd.merge(df, df_relations, left_on='id', right_on='leftid', how='left')
-    df = pd.merge(df, df_objects, left_on='relationid', right_on='objectid', how='inner')
-    df = pd.merge(df, df_objects, left_on='rightid', right_on='objectid', how='inner')
-    df = pd.merge(df, df_items, left_on='rightid', right_on='itemid', how='left')
-
-    df['placement'] = df.apply(lambda x: x['name_y'] if x['name_x'][-9:] == 'Placement' else 'unknown', axis=1)
-    df['responsible'] = df.apply(lambda x: x['username'] if x['name_x'][-11:] == 'Responsible' else 'unknown', axis=1)
-
-    if len(df) == 0:
-        print('The dataframe is empty. Something probably went wrong.')
-        return False
 
     df = df[['id', 'placement', 'responsible']]
+    df = pd.merge(df, df_timeconsumption, on='id')
 
-    cc = df.groupby(['id']).cumcount() + 1
-    df = df.set_index(['id', cc]).unstack().sort_index(1, level=1)
-    df.columns = ['_'.join(map(str, i)) for i in df.columns]
-    df = df.reset_index()
-    df = df.fillna('unknown')
-
-    def get_role(x, check, role):
-        user = 'unknown'
-        for el in check:
-            user_next = x[el].lower()
-            if user_next != 'unknown':
-                if user == 'unknown':
-                    user = user_next
-                elif user == 'it help line1':
-                    user = user_next
-        return user
-
-    check_placement = [x for x in df.columns if x[:9] == 'placement']
-    check_responsible = [x for x in df.columns if x[:11] == 'responsible']
-
-    check_placement.sort()
-    check_responsible.sort()
-
-    df['placement'] = df.apply(lambda x: get_role(x, check_placement, 'Placement'), axis=1)
-    df['responsible'] = df.apply(lambda x: get_role(x, check_responsible, 'Responsible'), axis=1)
-    df = df[['id', 'placement', 'responsible']]
-
+    print('Responsible, saving:', len(df))
     for i, el in df.iterrows():
 
         p = Predict.objects.filter(request_id=el.id).first()
+
         p_placement = []
         p_responsible = []
+        p_timeconsumption = 0
+
+        if isinstance(el.deadline, int):
+            true_deadline = datetime.fromtimestamp(el.deadline).isoformat()
+        else:
+            true_deadline = el.deadline.isoformat()
 
         if p:
             p_placement = p.data['placement'][0:3]
             p_responsible = p.data['responsible'][0:3]
+            p_timeconsumption = p.data['timeconsumption']
 
-        w = Responsible(request_id=el.id, data={
-            'true_placement': el.placement,
-            'true_responsible': el.responsible,
-            'predict_placement': p_placement,
-            'predict_responsible': p_responsible,
-        })
+        w = Responsible(
+            request_id=el.id,
+            true_placement=el.placement,
+            true_responsible=el.responsible,
+            true_timeconsumption=el.timeconsumption,
+            true_deadline=true_deadline,
+            data={
+                'true_placement': el.placement,
+                'true_responsible': el.responsible,
+                'true_timeconsumption': el.timeconsumption,
+                'predict_placement': p_placement,
+                'predict_responsible': p_responsible,
+                'predict_timeconsumption': p_timeconsumption,
+            }
+        )
         w.save()
 
     return df

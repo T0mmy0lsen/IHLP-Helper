@@ -1,17 +1,13 @@
 import React from "react";
 
 import {
-    Typography,
     ListHeader,
-    Formula,
     Section,
-    Action,
     Space,
     Title,
     List,
-    Post,
     Get, Main, ListItem,
-    Autocomplete, Conditions, ConditionsItem, Item, Search, Input, Switch
+    Conditions, ConditionsItem, Input, Switch
 } from 'react-antd-admin-panel/dist';
 
 import {SectionComponent} from 'react-antd-admin-panel/dist';
@@ -24,7 +20,7 @@ const workload_upper_limit = 2000;
 const limit_high = 5.8;
 const limit_low = 3.9;
 
-export default class Home extends React.Component<any, any> {
+export default class Search extends React.Component<any, any> {
 
     constructor(props) {
         super(props);
@@ -313,7 +309,7 @@ export default class Home extends React.Component<any, any> {
                         </>
                     }
                 ))
-                .expandable(() => true)
+                .expandable(() => false)
                 .expandableExpandAll()
                 .expandableSection((item: ListItem) => {
 

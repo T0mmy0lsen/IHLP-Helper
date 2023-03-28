@@ -20,7 +20,7 @@ class Command(BaseCommand):
     def run(self):
 
         calculatePrediction(
-            amount=10,
+            amount=100,
             delete=True
         )
 
