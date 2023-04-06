@@ -55,13 +55,15 @@ class WordEmbedding:
     def load(self):
 
         df_subject = pd.read_csv('data/subject.csv')
-        # df_description = pd.read_csv('data/description.csv')
+        df_description = pd.read_csv('data/description.csv')
 
         df_subject = df_subject.fillna('')
-        # df_description = df_description.fillna('')
+        df_description = df_description.fillna('')
 
-        df_subject['processed'] = self.train_preprocessing(df_subject.subject)
-        # df_description['processed'] = self.train_preprocessing(df_description.description)
+        df_subject = pd.merge(df_subject, df_description, on='id')
+
+        df_subject['processed'] = df_subject.apply(lambda x: "{} {}".format(x.subject, x.description), axis=1)
+        df_subject['processed'] = self.train_preprocessing(df_subject.processed)
 
         vectorizer = tf.keras.layers.TextVectorization(standardize=None, max_tokens=200000, output_sequence_length=512)
         text_ds = tf.data.Dataset.from_tensor_slices(df_subject.processed.values).batch(128)
@@ -71,15 +73,13 @@ class WordEmbedding:
         word_index = dict(zip(voc, range(len(voc))))
 
         embeddings_index = {}
-        word_count = 0
 
         skipped = 0
         we_path = 'data/word2vec_ihlp_100d.txt'
         with open(we_path) as f:
             for i, line in enumerate(f):
                 if i == 0:
-                    word_count, dim = line.split(maxsplit=1)
-                    word_count = int(word_count)
+                    _, dim = line.split(maxsplit=1)
                     dim = int(dim[:-1])
                 else:
                     word, coefs = line.split(maxsplit=1)
@@ -94,12 +94,12 @@ class WordEmbedding:
         print("Found %s word vectors." % len(embeddings_index))
         print("Skipped %s word vectors." % skipped)
 
-        num_tokens = word_count + 2
+        num_tokens = len(voc) + 2
         hits = 0
         misses = 0
         missed = []
 
-        word_index = dict(zip(embeddings_index.keys(), range(len(embeddings_index.keys()))))
+        # word_index = dict(zip(embeddings_index.keys(), range(len(embeddings_index.keys()))))
 
         # Prepare embedding matrix
         embedding_matrix = np.zeros((num_tokens, 100))
@@ -205,6 +205,8 @@ def build(input_layer, start_neurons=8, kernel_size=4, dropout=0.25):
 
     return output_layer
 
+# WordEmbedding().train()
+
 embedding_layer, embedding_matrix, vectorizer = WordEmbedding().load()
 
 input_layer = tf.keras.Input(shape=(None,), dtype="float64")
@@ -215,8 +217,8 @@ layers = tf.keras.layers.Dense(36, activation="softmax")(layers)
 model = tf.keras.Model(input_layer, layers)
 model.summary()
 
-df_train = pd.read_csv('data/cached_train_subject_label_placement.csv')
-df_test = pd.read_csv('data/cached_test_subject_label_placement.csv')
+df_train = pd.read_csv('data/cached_train_label_placement.csv')
+df_test = pd.read_csv('data/cached_test_label_placement.csv')
 
 # df_train = df_train[:1000]
 # df_test = df_test[:1000]
