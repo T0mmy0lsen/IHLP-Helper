@@ -15,7 +15,7 @@ from ihlp.controllers.request import getRequestLike, getRequest
 from ihlp.controllers.predict import getPredict
 
 from ms_identity_web.django.middleware import ms_identity_web
-from ihlp.models import Feedback, Predict, Workload, Responsible
+from ihlp.models import Feedback, Predict, Workload, Responsible, Hide
 from ihlp.models_ihlp import Request
 
 from django.conf import settings
@@ -32,6 +32,28 @@ else:
 @csrf_exempt
 def what(request):
     return HttpResponse("{\"message\": \"what.\"}", content_type="application/json")
+
+
+@csrf_exempt
+def nice(request):
+    return HttpResponse("{\"message\": \"nice.\"}", content_type="application/json")
+
+
+@csrf_exempt
+@api_view(['GET'])
+def hide(request):
+
+    if request.method == 'GET':
+
+        id = int(request.GET.get('id', 0))
+        hide = int(request.GET.get('hide', 0))
+
+        Hide(
+            request_id=id,
+            hide=hide,
+        ).save()
+
+    return nice(request)
 
 
 @csrf_exempt
@@ -130,8 +152,15 @@ def schedule(request):
                 return False
             return model_to_dict(p)
 
+        def applyGetHide(x):
+            p = Hide.objects.filter(request_id=x['request_id']).last()
+            if p is None:
+                return False
+            return model_to_dict(p)
+
         for res in responsibles:
             res['request'] = applyGetRequest(res)
+            res['hide'] = applyGetHide(res)
 
         return JsonResponse({
             'data': responsibles,

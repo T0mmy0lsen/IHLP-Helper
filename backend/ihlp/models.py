@@ -36,6 +36,16 @@ class Workload(models.Model):
         return "Workload: " + str(self.id)
 
 
+class Hide(models.Model):
+
+    id = models.AutoField(primary_key=True)
+    request_id = models.IntegerField()
+    hide = models.IntegerField()
+
+    def __str__(self):
+        return "Hide: " + str(self.id)
+
+
 class Feedback(models.Model):
 
     request_id = models.IntegerField()

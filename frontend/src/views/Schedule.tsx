@@ -7,11 +7,12 @@ import {
     Title,
     List,
     Main,
-    ListItem, Conditions, ConditionsItem, Autocomplete, Get, Item, Slider,
+    ListItem, Conditions, ConditionsItem, Autocomplete, Get, Item, Slider, Action,
 } from 'react-antd-admin-panel/dist';
 
 import {SectionComponent} from 'react-antd-admin-panel/dist';
 import {message} from "antd";
+import {DeleteOutlined, EyeInvisibleOutlined} from "@ant-design/icons";
 
 interface Data {
     true_placement: string;
@@ -30,6 +31,7 @@ interface Request {
     true_timeconsumption: number;
     true_deadline: string;
     request: any;
+    hide: any;
     data: Data;
 }
 
@@ -38,6 +40,7 @@ export default class Schedule extends React.Component<any, any> {
     constructor(props) {
         super(props);
         this.state = {
+            placement: undefined,
             section: false,
             slider: 1,
             data: [],
@@ -73,7 +76,9 @@ export default class Schedule extends React.Component<any, any> {
             requests.forEach((r, i) => {
                 requests[i]['subject'] = r['request'].subject;
                 requests[i]['remainingTime'] = Math.max(0.01, calculateRemainingTime(r) * remainingTimeScaler);
+                requests[i]['remainingTimeStr'] = requests[i]['remainingTime'].toFixed(2)
                 requests[i]['timeToDeadline'] = ((parseDeadline(r.true_deadline).getTime() - new Date().getTime()) / (60 * 1000)) * deadlineScaler;  // Minutes
+                requests[i]['timeToDeadlineStr'] = requests[i]['timeToDeadline'].toFixed(2)
             })
 
             requests.forEach((r, i) => {
@@ -81,23 +86,44 @@ export default class Schedule extends React.Component<any, any> {
                 requests[i]['deadline'] = requests[i]['true_deadline'] == '1970-01-01T01:00:00' ? '' : requests[i]['true_deadline']
             })
 
+            requests = requests.filter((r) => !(r.hide?.hide == 1))
+
             return requests.sort((a, b) => {
                 return a.priority - b.priority;
             });
         }
 
         const getList = (requests: Request[]) => {
-            return new List()
-                .unique((v) => v.id)
+
+            let list = new List()
+
+            list.unique((v) => v.id)
                 .default({ dataSource: requests })
                 .footer(false)
+                .actions(new Action().icon(EyeInvisibleOutlined).callback((v) => {
+                    new Get()
+                        .target(() => ({ method: 'GET', target: 'hide', params: { id: v.record.request_id, hide: 1 }}))
+                        .onComplete(() => {
+                            new Get()
+                                .target(() => ({ method: 'GET', target: '/schedule', params: { placement: this.state.placement }}))
+                                .onComplete((v) => {
+                                    if (v.status == 200) {
+                                        this.setState({ data: v.data.data })
+                                        condition.checkCondition({ data: v.data.data, slider: this.state.slider })
+                                    }
+                                })
+                                .onError(() => message.error('Error Get().target(() => \'schedule\')'))
+                                .get()
+                        })
+                        .get()
+                }))
                 .expandableByClick()
                 .headerCreate(false)
                 .headerPrepend(new ListHeader().key('request_id').title('Request').width('136px').searchable())
                 .headerPrepend(new ListHeader().key('subject').title('').searchable())
-                .headerPrepend(new ListHeader().key('remainingTime').title('remainingTime').searchable())
-                .headerPrepend(new ListHeader().key('timeToDeadline').title('timeToDeadline').searchable())
-                .headerPrepend(new ListHeader().key('deadline').title('deadline').searchable())
+                .headerPrepend(new ListHeader().key('remainingTimeStr').title('Remaining Time').searchable())
+                .headerPrepend(new ListHeader().key('timeToDeadlineStr').title('Time To Deadline').searchable())
+                .headerPrepend(new ListHeader().key('deadline').title('Deadline').searchable())
                 .expandable(() => false)
                 .expandableExpandAll()
                 .expandableSection((item: ListItem) => {
@@ -111,6 +137,7 @@ export default class Schedule extends React.Component<any, any> {
 
                     return section;
                 });
+            return list;
         };
 
         const getCondition = (condition) => {
@@ -146,6 +173,7 @@ export default class Schedule extends React.Component<any, any> {
                 )
                 .onChange((v) => {
                     if (v.value) {
+                        this.setState({ placement: v.value.toLowerCase() });
                         new Get()
                             .target(() => ({ target: '/schedule', params: { placement: v.object.key }}))
                             .onComplete((v) => {
