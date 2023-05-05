@@ -57,4 +57,5 @@ ax = df_t.hist(column='label_encoded', bins=60)
 plt.savefig('histogram.png')
 """
 
-
+# df = pd.read_csv('data/label_timeconsumption.csv', dtype=int)
+# print(df.hist(column='label_encoded', bins=11))
