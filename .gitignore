@@ -6,6 +6,7 @@
 /backend/ihlp/notebooks/data/models
 /backend/ihlp/notebooks/database
 /backend/ihlp/notebooks/evaluate
+/backend/ihlp/notebooks/*.csv
 
 /backend/saved/pipeline/data/input
 /backend/saved/pipeline/data/output
