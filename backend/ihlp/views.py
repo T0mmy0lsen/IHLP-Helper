@@ -160,7 +160,7 @@ def schedule(request):
 
         for res in responsibles:
             res['request'] = applyGetRequest(res)
-            res['hide'] = applyGetHide(res)
+            res['hide'] = False # applyGetHide(res)
 
         return JsonResponse({
             'data': responsibles,
