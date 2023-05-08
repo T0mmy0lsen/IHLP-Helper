@@ -30,7 +30,7 @@ class Command(BaseCommand):
         )
 
         createWorkload(
-            amount=100
+            amount=500
         )
 
 
