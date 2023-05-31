@@ -51,7 +51,7 @@ Call the API http://127.0.0.1:8000/ihlp/load
 This will take some time to load. It's the best method I got to work.
 
 ### Admin page
-Visit http://127.0.0.1:8000/admin/ with `-u tool -p t0o5m0m4y`
+Visit http://127.0.0.1:8000/admin/ with `-u tool -p ?`
 
 ### Errors
 None.
