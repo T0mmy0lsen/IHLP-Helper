@@ -1,4 +1,9 @@
 import os
+<<<<<<< HEAD:backend/ihlp/notebooks/5_0_word_embedding.py
+=======
+
+# os.add_dll_directory("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.4/bin")
+>>>>>>> c33128bae6b7d9fa9030c548208e4823278f7838:backend/ihlp/notebooks/5_word_embedding.py
 
 import re
 import time
@@ -42,18 +47,29 @@ class WordEmbedding:
 
     def load(self, TEXT, path):
 
+<<<<<<< HEAD:backend/ihlp/notebooks/5_0_word_embedding.py
         vector_size = 100
         if path == 'data/danish_dsl_and_reddit_word2vec_word_embeddings.txt':
             vector_size = 500
 
         df_subject = pd.read_csv(f'data/subject{TEXT}.csv')
         df_description = pd.read_csv(f'data/description{TEXT}.csv')
+=======
+        df_subject = pd.read_csv('data/subject.csv')
+        df_description = pd.read_csv('data/description.csv')
+>>>>>>> c33128bae6b7d9fa9030c548208e4823278f7838:backend/ihlp/notebooks/5_word_embedding.py
 
         df_subject = df_subject.fillna('')
         df_description = df_description.fillna('')
 
         df_subject = pd.merge(df_subject, df_description, on='id')
+<<<<<<< HEAD:backend/ihlp/notebooks/5_0_word_embedding.py
         df_subject['processed'] = df_subject.apply(lambda x: "{} {}".format(x.subject, x.description), axis=1)
+=======
+
+        df_subject['processed'] = df_subject.apply(lambda x: "{} {}".format(x.subject, x.description), axis=1)
+        df_subject['processed'] = self.train_preprocessing(df_subject.processed)
+>>>>>>> c33128bae6b7d9fa9030c548208e4823278f7838:backend/ihlp/notebooks/5_word_embedding.py
 
         vectorizer = tf.keras.layers.TextVectorization(standardize=None, max_tokens=25000, output_sequence_length=512)
         text_ds = tf.data.Dataset.from_tensor_slices(df_subject.processed.values).batch(128)
@@ -195,9 +211,15 @@ def build(input_layer, start_neurons=8, kernel_size=4, dropout=0.25):
 
     return output_layer
 
+<<<<<<< HEAD:backend/ihlp/notebooks/5_0_word_embedding.py
 def curriculum_sort(df):
     df['text_length'] = df['text'].apply(lambda x: len(x.split()))
     return df.sort_values(by='text_length').drop('text_length', axis=1)
+=======
+# WordEmbedding().train()
+
+embedding_layer, embedding_matrix, vectorizer = WordEmbedding().load()
+>>>>>>> c33128bae6b7d9fa9030c548208e4823278f7838:backend/ihlp/notebooks/5_word_embedding.py
 
 # Define a list of learning rates to try
 learning_rates = [0.1, 0.01, 0.001, 0.0001]
@@ -208,9 +230,14 @@ LABELS = ['_placement']
 WORD2VECS_EXT = [True, False]
 WORD2VECS_EXT = [False]
 
+<<<<<<< HEAD:backend/ihlp/notebooks/5_0_word_embedding.py
 # Define a list of learning rates to try
 learning_rates = [1.0, 0.5, 0.1, 0.05, 0.01, 0.005, 0.001, 0.0005, 0.0001]
 learning_rates = [0.005, 0.001, 0.0005, 0.0001]
+=======
+df_train = pd.read_csv('data/cached_train_label_placement.csv')
+df_test = pd.read_csv('data/cached_test_label_placement.csv')
+>>>>>>> c33128bae6b7d9fa9030c548208e4823278f7838:backend/ihlp/notebooks/5_word_embedding.py
 
 for WORD2VEC_EXT in WORD2VECS_EXT:
     for LABEL in LABELS:

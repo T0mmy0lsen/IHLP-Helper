@@ -282,6 +282,7 @@ export default class Search extends React.Component<any, any> {
                 .headerPrepend(new ListHeader().key('responsible').title('Responsible').render(
                     (v, o) => {
                         if (!o.responsible || o.responsible.data.predict_responsible.length == 0) return <></>
+<<<<<<< HEAD
 
                         let objects = [0, 1, 2].map(v => ({
                             name: o.responsible.data.predict_responsible[v].name,
@@ -310,6 +311,15 @@ export default class Search extends React.Component<any, any> {
                             <Col>
                                 {
                                     objects.map(v => {
+=======
+                        return <>
+                            <Col>
+                                {
+                                    [0, 1, 2].map(v => {
+                                        let name = o.responsible.data.predict_responsible[v].name;
+                                        let value = o.responsible.data.predict_responsible[v].prediction_log
+                                        let color = value > limit_high ? '#52c41a' : (value < limit_low ? '#f5222d' : '#faad14')
+>>>>>>> c33128bae6b7d9fa9030c548208e4823278f7838
                                         return <Row>
                                             <Col>
                                                 <Badge.Ribbon text={v.value.toFixed(1)} color={v.color}>

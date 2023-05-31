@@ -19,6 +19,14 @@ def text_clean(x):
 
 # Load the data.
 df = pd.read_csv(PATH_REQUESTS,  encoding='UTF-8',  delimiter=';', quotechar='"', dtype=str, parse_dates=True)
+<<<<<<< HEAD:backend/ihlp/notebooks/1_0_process_text_html_tags.py
+=======
+print('Length:', len(df))
+
+# Filter out for evaluation.
+df.receivedDate = pd.to_datetime(df.receivedDate)
+df = df[df['receivedDate'] < datetime.strptime("2023-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")]
+>>>>>>> c33128bae6b7d9fa9030c548208e4823278f7838:backend/ihlp/notebooks/1_process_text.py
 df = df.fillna('')
 print('Length:', len(df))
 

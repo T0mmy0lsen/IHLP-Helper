@@ -30,10 +30,13 @@ if not HAS_CACHE_DATA:
     df_requests = df_requests.fillna('')
 
     df = pd.read_csv(PATH_REQUESTS, usecols=['id'], dtype=str)
+<<<<<<< HEAD:backend/ihlp/notebooks/2_0_create_labels.py
     df_validate = pd.read_csv(PATH_REQUESTS_VALIDATE, usecols=['id'], dtype=str)
 
     df = pd.concat([df, df_validate])
 
+=======
+>>>>>>> c33128bae6b7d9fa9030c548208e4823278f7838:backend/ihlp/notebooks/2_set_responsible.py
     df_requests = df_requests[df_requests.id.isin(df.id.values)]
 
     if DEBUG:
@@ -128,6 +131,7 @@ def get_labels(labels):
     le.fit(labels)
     return le
 
+<<<<<<< HEAD:backend/ihlp/notebooks/2_0_create_labels.py
 
 df = pd.read_csv('data/label_users.csv', dtype=str)
 df['id'] = df['id'].astype(int)
@@ -135,6 +139,15 @@ df = df.sort_values(by='id')
 df = df.fillna('')
 df_latest = df[-25000:]
 
+=======
+
+df = pd.read_csv('data/label_users.csv', dtype=str)
+df['id'] = df['id'].astype(int)
+df = df.sort_values(by='id')
+df = df.fillna('')
+df_latest = df[-25000:]
+
+>>>>>>> c33128bae6b7d9fa9030c548208e4823278f7838:backend/ihlp/notebooks/2_set_responsible.py
 df_for_placement = df_latest[df_latest.label_placement != 'unknown']
 top_list_label_placement = df_for_placement.label_placement.value_counts().index.tolist()[:250]
 
