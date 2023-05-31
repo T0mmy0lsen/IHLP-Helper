@@ -1,12 +1,14 @@
 
 import random
+
+from joblib import load
 from time import sleep
 
 from tqdm import tqdm
 from collections import deque
 
-from ihlp.notebooks.Schedule_classes import Machine, Job
-from ihlp.notebooks.Schedule_7_3_distributions_schedule_preprocess import build
+from Schedule_classes import Machine, Job
+from Schedule_7_3_distributions_schedule_preprocess import build
 
 import datetime
 import pandas as pd
@@ -25,6 +27,7 @@ np.random.seed(42)
 
 start_time = time.time()
 
+ERRORS = 0
 
 class Stats:
 
@@ -232,15 +235,19 @@ def simulate_online_scheduling(
     return stats, queue, queue_for_awaiting_release, jobs
 
 
-def create_job_queue(cross_validate=0, days=30):
+def create_job_queue(cross_validate=0, days=120, do_predict=False, predictions=None):
 
     df = pd.read_csv('bunch_of_tasks_but_better.csv')
+    df = pd.merge(df, predictions, on='id', how='left')
+    
     df = df.fillna('')
     df = df[df.current_placement != '']
+    df = df[df.DUM != '']
+
     df['reaction_timestamp'] = pd.to_datetime(df['reaction_timestamp'])
 
-    date_y = pd.to_datetime('2022-12-31') - pd.DateOffset(days=(cross_validate * days))
-    date_x = pd.to_datetime('2022-12-31') - pd.DateOffset(days=(cross_validate * days) + days)
+    date_x = pd.to_datetime('2022-12-31') + pd.DateOffset(days=(cross_validate * days))
+    date_y = pd.to_datetime('2022-12-31') + pd.DateOffset(days=(cross_validate * days) + days)
 
     tmp = df[(df['event'] == 'created') & (df['reaction_timestamp'] >= date_x) & (df['reaction_timestamp'] <= date_y)]
 
@@ -254,9 +261,15 @@ def create_job_queue(cross_validate=0, days=30):
 
     jobs = []
 
-    for _, group in df.groupby('id'):
+    def get_time_consumption(do_predict, group):
+        if not do_predict:
+            return sum(group.duration.values)
+        else:
+            return group.iloc[0][do_predict]
+
+    for group_id, group in df.groupby('id'):
         last_job = None
-        time_consumption_left = sum(group.duration.values)
+        time_consumption_left = get_time_consumption(do_predict, group)
         for _, row in group.iterrows():
 
             job = Job(
@@ -277,15 +290,37 @@ def create_job_queue(cross_validate=0, days=30):
             last_job = job
             time_consumption_left -= row.duration
 
+    print('Total ERRORS: {}'.format(ERRORS))
+
     unique_placements = np.unique(df.current_placement.values)
 
     return jobs, unique_placements
 
 
 root = build()
+
+df = pd.read_csv(f'data/cached_html_tags_validate_timeconsumption.csv')
+
+df['BRT'] = np.load('validate_timeconsumption_predictions.npy')
+
+tfidf_vectorizer = load(f'data/models/tfidf/tfidf_vectorizer_html_tags_placement.joblib')
+clf_DUM = load(f'data/models/sklearn/DUM_html_tags_timeconsumption.joblib')
+clf_RFC = load(f'data/models/sklearn/RFR_html_tags_timeconsumption.joblib')
+
+
+def vectorizer(data):
+    return pd.Series(tfidf_vectorizer.transform(data).todense().tolist())
+
+x_validate_tfidf = vectorizer(df.text.values)
+
+y_preds_DUM = clf_DUM.predict(x_validate_tfidf.tolist())
+y_preds_RFC = clf_RFC.predict(x_validate_tfidf.tolist())
+
+df['DUM'] = y_preds_DUM
+df['RFC'] = y_preds_RFC
+
 print("Starting simulation")
 sleep(1)
-
 
 def copy_shift(e, c):
     tmp = copy.deepcopy(e)
@@ -304,71 +339,72 @@ def create_job_extra(_root, _max_time_step):
 
     return jobs
 
+for do_predict in [False, 'DUM', 'RFC', 'BRT']:
+    for cross_validate in [0]:
+        jobs, unique_placements = create_job_queue(cross_validate, days=120, do_predict=do_predict, predictions=df)
+        max_time_step = int(jobs[-1].release_time_remaining)
+        jobs_extra = create_job_extra(_root=root, _max_time_step=max_time_step)
+        machines_hours = {placement: generate_active_periods(3, max_time_step) for placement in unique_placements}
+        for e in ['FIFO', 'SHORTEST-TIME-LEFT', 'DYNAMIC_300']:
+            for horizontal_scaling in [1, 2, 3]:
+                for vertical_scaling in [1, 2, 3]:
+                    for jobs_extra_active in [False, True]:
+                        for machines_hours_active in [False, True]:
 
-for cross_validate in [0, 1, 2, 3, 4]:
-    jobs, unique_placements = create_job_queue(cross_validate, days=30)
-    max_time_step = int(jobs[-1].release_time_remaining)
-    jobs_extra = create_job_extra(_root=root, _max_time_step=max_time_step)
-    machines_hours = {placement: generate_active_periods(3, max_time_step) for placement in unique_placements}
-    for e in ['FIFO', 'SHORTEST-TIME-LEFT', 'EARLIEST-DEADLINE', 'DYNAMIC_001', 'DYNAMIC_025', 'DYNAMIC_075', 'DYNAMIC_150', 'DYNAMIC_300']:
-        for horizontal_scaling in [1, 2, 3]:
-            for vertical_scaling in [1, 2, 3]:
-                for jobs_extra_active in [True, False]:
-                    for machines_hours_active in [True, False]:
+                            print(f"Start simulation: {time.time() - start_time}")
 
-                        print(f"Start simulation: {time.time() - start_time}")
+                            jobs_copy = []
 
-                        jobs_copy = []
+                            if jobs_extra_active:
+                                jobs_copy += [copy_shift(e, 0) for e in jobs_extra]
+                            for c in range(vertical_scaling):
+                                jobs_copy += [copy_shift(e, c - 1) for e in jobs]
 
-                        if jobs_extra_active:
-                            jobs_copy += [copy_shift(e, 0) for e in jobs_extra]
-                        for c in range(vertical_scaling):
-                            jobs_copy += [copy_shift(e, c - 1) for e in jobs]
-
-                        stats, queue, queue_for_awaiting_release, all_jobs = simulate_online_scheduling(
-                            jobs=jobs_copy,
-                            unique_placements=unique_placements,
-                            total_simulation_time=max_time_step,
-                            complete=False,
-                            scale=horizontal_scaling,
-                            method=e,
-                            machines_hours=machines_hours,
-                            machines_hours_active=machines_hours_active,
-                        )
-
-                        print(f"Start completed: {time.time() - start_time}")
-
-                        reaction_time = 0
-                        completion_time = 0
-                        deadline_time = 0
-
-                        all_jobs = [e for e in all_jobs if e.started and e.get_leaf().completion_time > 0]
-
-                        for job in all_jobs:
-                            reaction_time = job.reaction_time
-                            release_time = job.release_time_actual
-                            completion_time += job.get_leaf().completion_time - release_time - reaction_time
-                            reaction_time += reaction_time
-                            deadline = (60 * 24 * 3) - (job.get_leaf().completion_time - release_time)
-                            deadline_time += deadline if deadline >= 0 else 0
-
-                        queue_size = sum([len(v) for k, v in queue.items()])
-                        idle_time = sum([v for k, v in stats.job_idle_count.items()])
-
-                        print(f"Write to: results_{cross_validate}.csv")
-                        with open(f"results_{cross_validate}.csv", 'a') as file:
-                            file.write(
-                                f"{cross_validate},"
-                                f"{e},"
-                                f"{horizontal_scaling},"
-                                f"{vertical_scaling},"
-                                f"{len(queue_for_awaiting_release)},"
-                                f"{queue_size},"
-                                f"{idle_time},"
-                                f"{(completion_time / len(all_jobs))},"
-                                f"{(reaction_time / len(all_jobs))},"
-                                f"{(deadline_time / len(all_jobs))},"
-                                f"{machines_hours_active},"
-                                f"{jobs_extra_active}"
-                                f"\n"
+                            stats, queue, queue_for_awaiting_release, all_jobs = simulate_online_scheduling(
+                                jobs=jobs_copy,
+                                unique_placements=unique_placements,
+                                total_simulation_time=max_time_step,
+                                complete=False,
+                                scale=horizontal_scaling,
+                                method=e,
+                                machines_hours=machines_hours,
+                                machines_hours_active=machines_hours_active,
                             )
+
+                            print(f"Start completed: {time.time() - start_time}")
+
+                            reaction_time = 0
+                            completion_time = 0
+                            deadline_time = 0
+
+                            all_jobs = [e for e in all_jobs if e.started and e.get_leaf().completion_time > 0]
+
+                            for job in all_jobs:
+                                reaction_time = job.reaction_time
+                                release_time = job.release_time_actual
+                                completion_time += job.get_leaf().completion_time - release_time - reaction_time
+                                reaction_time += reaction_time
+                                deadline = (60 * 24 * 3) - (job.get_leaf().completion_time - release_time)
+                                deadline_time += deadline if deadline >= 0 else 0
+
+                            queue_size = sum([len(v) for k, v in queue.items()])
+                            idle_time = sum([v for k, v in stats.job_idle_count.items()])
+
+                            print(f"Write to: results_validate_{cross_validate}.csv")
+                            with open(f"results_validate_{cross_validate}.csv", 'a') as file:
+                                file.write(
+                                    f"{cross_validate},"
+                                    f"{e},"
+                                    f"{horizontal_scaling},"
+                                    f"{vertical_scaling},"
+                                    f"{len(queue_for_awaiting_release)},"
+                                    f"{queue_size},"
+                                    f"{idle_time},"
+                                    f"{(completion_time / len(all_jobs))},"
+                                    f"{(reaction_time / len(all_jobs))},"
+                                    f"{(deadline_time / len(all_jobs))},"
+                                    f"{machines_hours_active},"
+                                    f"{jobs_extra_active},"
+                                    f"{do_predict}"
+                                    f"\n"
+                                )

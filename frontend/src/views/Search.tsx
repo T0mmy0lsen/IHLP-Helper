@@ -282,22 +282,46 @@ export default class Search extends React.Component<any, any> {
                 .headerPrepend(new ListHeader().key('responsible').title('Responsible').render(
                     (v, o) => {
                         if (!o.responsible || o.responsible.data.predict_responsible.length == 0) return <></>
+
+                        let objects = [0, 1, 2].map(v => ({
+                            name: o.responsible.data.predict_responsible[v].name,
+                            value: o.responsible.data.predict_responsible[v].prediction_log,
+                            color: '',
+                            workload: 0,
+                        }));
+
+                        objects.forEach(v => {
+                            v.workload = this.state.workload.responsible[v.name]
+                        })
+
+                        let choice = objects[0];
+                        objects.forEach(v => {
+                            if (v.value >= limit_high && v.workload < choice.workload) {
+                                choice = v;
+                            }
+                        })
+
+                        objects.forEach(v => {
+                            // v.color = v.name == choice.name ? 'primary' : (v.value > limit_high ? '#52c41a' : (v.value < limit_low ? '#f5222d' : '#faad14'))
+                            v.color = v.value > limit_high ? '#52c41a' : (v.value < limit_low ? '#f5222d' : '#faad14')
+                        })
+
                         return <>
                             <Col>
                                 {
-                                    [0, 1, 2].map(v => {
-                                        let name = o.responsible.data.predict_responsible[v].name;
-                                        let value = o.responsible.data.predict_responsible[v].prediction_log
-                                        let color = value > limit_high ? '#52c41a' : (value < limit_low ? '#f5222d' : '#faad14')
+                                    objects.map(v => {
                                         return <Row>
                                             <Col>
-                                                <Badge.Ribbon text={value.toFixed(1)} color={color}>
+                                                <Badge.Ribbon text={v.value.toFixed(1)} color={v.color}>
                                                     <Descriptions layout="horizontal" size="small" bordered
-                                                                  style={{width: 300, padding: 0, margin: 4}}>
-                                                        <Descriptions.Item span={12} labelStyle={{width: 60}} label={<>
-                                                            <Badge text={this.state.workload.responsible[name] ?? 0} />
+                                                                  style={v.name == choice.name
+                                                                      ? { width: 300, padding: 0, marginTop: 4, marginBottom: 4 }
+                                                                      : { width: 300, padding: 0, marginTop: 4, marginBottom: 4 }
+                                                                  }>
+                                                        <Descriptions.Item span={12} labelStyle={{width: 80}} label={<>
+                                                            <Badge status={v.name == choice.name ? 'success' : 'default'} text={v.workload ?? 0} />
                                                         </>}>
-                                                            {name}
+                                                            {v.name}
                                                         </Descriptions.Item>
                                                     </Descriptions>
                                                 </Badge.Ribbon>

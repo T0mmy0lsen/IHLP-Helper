@@ -1,0 +1,21 @@
+[
+  {"self-cnn-_html_tags-_placement": 0.7290453314781189},
+  {"self-cnn-_html_tags-_responsible": 0.381156325340271},
+  {"self-cnn-_html_tags-_timeconsumption": 11.411993980407715},
+  {"self-cnn-_raw-_placement": 0.6806255578994751},
+  {"self-cnn-_raw-_responsible": 0.332063227891922},
+  {"self-cnn-_raw-_timeconsumption": 11.02713394165039},
+  {"self-cnn-_lemmatize-_placement": 0.7309374213218689},
+  {"self-cnn-_lemmatize-_responsible":  0.40294045209884644},
+  {"self-cnn-_lemmatize-_timeconsumption": 10.27235221862793},
+  {"self-lstm-_html_tags-_placement": 0.7866474986076355},
+  {"self-lstm-_html_tags-_responsible": 0.4935760200023651},
+  {"self-lstm-_html_tags-_timeconsumption": 11.377084732055664},
+  {"self-lstm-_raw-_placement": 0.7150428295135498},
+  {"self-lstm-_raw-_responsible": 0.4121425747871399},
+  {"self-lstm-_raw-_timeconsumption": 11.747090339660645},
+  {"self-lstm-_lemmatize-_placement": 0.7887157797813416},
+  {"self-lstm-_lemmatize-_responsible": 0.5055748820304871},
+  {"self-lstm-_lemmatize-_timeconsumption": 11.228643417358398}
+]
+

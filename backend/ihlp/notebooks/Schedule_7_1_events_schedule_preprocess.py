@@ -90,7 +90,7 @@ def create_merge():
 
 
 
-create_relations()
+# create_relations()
 # create_requests()
-create_merge()
+# create_merge()
 pass

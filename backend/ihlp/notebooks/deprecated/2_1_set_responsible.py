@@ -12,7 +12,7 @@ df_p = df_p.drop_duplicates(subset=['id'])
 df_r = df[(df.current_responsible != 'unset')]
 df_r = df_r.drop_duplicates(subset=['id'])
 
-date = pd.to_datetime('2022-01-01')
+date = pd.to_datetime('2018-01-01')
 
 tmp_p = df_p[(df_p['reaction_timestamp'] >= date)]
 tmp_r = df_r[(df_r['reaction_timestamp'] >= date)]
@@ -31,3 +31,6 @@ df_r = df_r.rename(columns={'current_responsible': 'label_responsible'})
 
 df_p[['id', 'label_encoded', 'label_placement']].to_csv('encoded_current_placement.csv', index=False)
 df_r[['id', 'label_encoded', 'label_responsible']].to_csv('encoded_current_responsible.csv', index=False)
+
+print(df_p.label_placement.value_counts())
+print(len(df_p))

@@ -4,12 +4,14 @@ import pandas as pd
 
 from sklearn import preprocessing
 from tqdm import tqdm
-from datetime import datetime
 
 tqdm.pandas()
 
-HAS_CACHE_DATA = os.path.isfile('data/label_users.csv')
-PATH_REQUESTS = 'data/subject.csv'
+HAS_CACHE_DATA = False
+
+PATH_REQUESTS = 'data/subject_html_tags.csv'
+PATH_REQUESTS_VALIDATE = 'data/subject_html_tags_validate.csv'
+
 DEBUG = False
 DEBUG_REQUEST = '85598869'
 
@@ -28,6 +30,10 @@ if not HAS_CACHE_DATA:
     df_requests = df_requests.fillna('')
 
     df = pd.read_csv(PATH_REQUESTS, usecols=['id'], dtype=str)
+    df_validate = pd.read_csv(PATH_REQUESTS_VALIDATE, usecols=['id'], dtype=str)
+
+    df = pd.concat([df, df_validate])
+
     df_requests = df_requests[df_requests.id.isin(df.id.values)]
 
     if DEBUG:

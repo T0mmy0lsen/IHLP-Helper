@@ -1,7 +1,5 @@
 import os
 
-# os.add_dll_directory("C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.4/bin")
-
 import re
 import time
 import pandas as pd
@@ -9,6 +7,7 @@ import numpy as np
 import tensorflow as tf
 
 from gensim.models import Word2Vec
+from sklearn.utils import resample
 from tqdm import tqdm
 
 tqdm.pandas()
@@ -16,29 +15,18 @@ tqdm.pandas()
 
 class WordEmbedding:
 
-    def train_preprocessing(self, titles_array):
-
-        processed_array = []
-
-        for title in tqdm(titles_array):
-            processed = re.sub('[^a-zA-Z ]', '', title)
-            words = processed.split()
-            processed_array.append(' '.join([word for word in words if len(word) > 1]))
-
-        return processed_array
-
-    def train(self):
+    def train(self, TEXT, path):
 
         start_time = time.time()
 
-        df_subject = pd.read_csv('data/subject.csv')
-        df_description = pd.read_csv('data/description.csv')
+        df_subject = pd.read_csv(f'data/subject{TEXT}.csv')
+        df_description = pd.read_csv(f'data/description{TEXT}.csv')
 
         df_subject = df_subject.fillna('')
         df_description = df_description.fillna('')
 
-        df_subject['processed'] = self.train_preprocessing(df_subject.subject)
-        df_description['processed'] = self.train_preprocessing(df_description.description)
+        df_subject['processed'] = df_subject.subject
+        df_description['processed'] = df_description.description
 
         sentences = pd.concat([df_subject.processed, df_description.processed], axis=0)
         train_sentences = list(sentences.progress_apply(str.split).values)
@@ -48,24 +36,26 @@ class WordEmbedding:
                          vector_size=100,
                          workers=4)
 
-        model.wv.save_word2vec_format('data/word2vec_ihlp_100d.txt')
+        model.wv.save_word2vec_format(path)
 
         print(f'Time taken : {(time.time() - start_time) / 60:.2f} mins')
 
-    def load(self):
+    def load(self, TEXT, path):
 
-        df_subject = pd.read_csv('data/subject.csv')
-        df_description = pd.read_csv('data/description.csv')
+        vector_size = 100
+        if path == 'data/danish_dsl_and_reddit_word2vec_word_embeddings.txt':
+            vector_size = 500
+
+        df_subject = pd.read_csv(f'data/subject{TEXT}.csv')
+        df_description = pd.read_csv(f'data/description{TEXT}.csv')
 
         df_subject = df_subject.fillna('')
         df_description = df_description.fillna('')
 
         df_subject = pd.merge(df_subject, df_description, on='id')
-
         df_subject['processed'] = df_subject.apply(lambda x: "{} {}".format(x.subject, x.description), axis=1)
-        df_subject['processed'] = self.train_preprocessing(df_subject.processed)
 
-        vectorizer = tf.keras.layers.TextVectorization(standardize=None, max_tokens=200000, output_sequence_length=512)
+        vectorizer = tf.keras.layers.TextVectorization(standardize=None, max_tokens=25000, output_sequence_length=512)
         text_ds = tf.data.Dataset.from_tensor_slices(df_subject.processed.values).batch(128)
         vectorizer.adapt(text_ds)
 
@@ -75,8 +65,7 @@ class WordEmbedding:
         embeddings_index = {}
 
         skipped = 0
-        we_path = 'data/word2vec_ihlp_100d.txt'
-        with open(we_path) as f:
+        with open(path) as f:
             for i, line in enumerate(f):
                 if i == 0:
                     _, dim = line.split(maxsplit=1)
@@ -102,7 +91,7 @@ class WordEmbedding:
         # word_index = dict(zip(embeddings_index.keys(), range(len(embeddings_index.keys()))))
 
         # Prepare embedding matrix
-        embedding_matrix = np.zeros((num_tokens, 100))
+        embedding_matrix = np.zeros((num_tokens, vector_size))
         for word, i in word_index.items():
             embedding_vector = embeddings_index.get(word)
             if embedding_vector is not None:
@@ -120,6 +109,7 @@ class WordEmbedding:
         embedding_layer = tf.keras.layers.Embedding(
             num_tokens,
             dim,
+            input_shape=512,
             embeddings_initializer=tf.keras.initializers.Constant(embedding_matrix),
             trainable=False,
         )
@@ -205,35 +195,115 @@ def build(input_layer, start_neurons=8, kernel_size=4, dropout=0.25):
 
     return output_layer
 
-# WordEmbedding().train()
+def curriculum_sort(df):
+    df['text_length'] = df['text'].apply(lambda x: len(x.split()))
+    return df.sort_values(by='text_length').drop('text_length', axis=1)
 
-embedding_layer, embedding_matrix, vectorizer = WordEmbedding().load()
+# Define a list of learning rates to try
+learning_rates = [0.1, 0.01, 0.001, 0.0001]
 
-input_layer = tf.keras.Input(shape=(None,), dtype="float64")
-layers = embedding_layer(input_layer)
-layers = build(layers, dropout=.1, kernel_size=8)
-layers = tf.keras.layers.Dense(36, activation="softmax")(layers)
+TEXTS = ['_html_tags', '_raw', '_lemmatize']
+LABELS = ['_placement', '_responsible', '_timeconsumption']
+LABELS = ['_placement']
+WORD2VECS_EXT = [True, False]
+WORD2VECS_EXT = [False]
 
-model = tf.keras.Model(input_layer, layers)
-model.summary()
+# Define a list of learning rates to try
+learning_rates = [1.0, 0.5, 0.1, 0.05, 0.01, 0.005, 0.001, 0.0005, 0.0001]
+learning_rates = [0.005, 0.001, 0.0005, 0.0001]
 
-df_train = pd.read_csv('data/cached_train_label_placement.csv')
-df_test = pd.read_csv('data/cached_test_label_placement.csv')
+for WORD2VEC_EXT in WORD2VECS_EXT:
+    for LABEL in LABELS:
+        for TEXT in TEXTS:
 
-# df_train = df_train[:1000]
-# df_test = df_test[:1000]
+            df_train = pd.read_csv(f'data/cached_train{TEXT}{LABEL}.csv')
+            df_test = pd.read_csv(f'data/cached_test{TEXT}{LABEL}.csv')
 
-x_train = WordEmbedding.bulk_vectorize(df_train.text.values, vectorizer)
-x_test = WordEmbedding.bulk_vectorize(df_test.text.values, vectorizer)
+            # Calculate the mean number of instances per class
+            mean_count = int(df_train['label'].value_counts().mean())
 
-for i in [0.01]:
-    for b in [32]:
-        model.compile(
-            loss="sparse_categorical_crossentropy",
-            optimizer=tf.keras.optimizers.Adamax(
-                learning_rate=i,
-            ),
-            metrics=["acc"]
-        )
+            df_train_balanced = pd.DataFrame()
 
-        model.fit(x_train, df_train.label.values, batch_size=b, epochs=100, validation_data=(x_test, df_test.label.values))
+            for label in df_train['label'].unique():
+                df_label = df_train[df_train['label'] == label]
+
+                if len(df_label) > mean_count:
+                    # If this label has more instances than the mean, downsample
+                    df_label = df_label.sample(mean_count)
+                elif len(df_label) < mean_count:
+                    # If this label has less instances than the mean, upsample
+                    df_label = resample(df_label, replace=True, n_samples=mean_count, random_state=123)
+
+                df_train_balanced = pd.concat([df_train_balanced, df_label])
+
+            df_train = df_train_balanced
+
+            path = f'data/word2vec{TEXT}_100d.txt'
+            if WORD2VEC_EXT:
+                path = 'data/danish_dsl_and_reddit_word2vec_word_embeddings.txt'
+
+            if not os.path.isfile(path) and path != 'data/danish_dsl_and_reddit_word2vec_word_embeddings.txt':
+                WordEmbedding().train(TEXT, path)
+            embedding_layer, embedding_matrix, vectorizer = WordEmbedding().load(TEXT, path)
+
+            x_train = WordEmbedding.bulk_vectorize(df_train.text.values, vectorizer)
+            x_test = WordEmbedding.bulk_vectorize(df_test.text.values, vectorizer)
+
+            # Iterate over learning rates
+            for lr in learning_rates:
+
+                # Hyperparameter tuning
+                batch_sizes = [32, 64, 128]
+                best_val_acc = 0
+                best_batch_size = 32
+
+                for BATCH in batch_sizes:
+
+                    input_layer = tf.keras.Input(shape=(None,), dtype="float64")
+                    layers = embedding_layer(input_layer)
+                    layers = build(layers, dropout=.1, kernel_size=8)
+
+                    if LABEL == '_timeconsumption':
+                        layers = tf.keras.layers.Dense(1)(layers)
+                    else:
+                        layers = tf.keras.layers.Dense(len(df_train.label.unique()), activation="softmax")(layers)
+
+                    model = tf.keras.Model(input_layer, layers)
+                    # model.summary()
+
+                    EPOCHS = 5
+
+                    batches_per_epoch = len(x_train) // BATCH
+                    total_train_steps = int(batches_per_epoch * EPOCHS)
+
+                    print(batches_per_epoch)
+                    print(total_train_steps)
+
+                    # Use the current learning rate
+                    initial_learning_rate = lr
+                    lr_schedule = tf.keras.optimizers.schedules.PolynomialDecay(
+                        initial_learning_rate,
+                        total_train_steps,
+                        end_learning_rate=0.0005,
+                        power=1.0
+                    )
+
+                    optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
+
+                    if LABEL == '_timeconsumption':
+                        model.compile(
+                            loss="mae",
+                            optimizer=optimizer,
+                            metrics=["mae"]
+                        )
+                    else:
+                        model.compile(
+                            loss="sparse_categorical_crossentropy",
+                            optimizer=optimizer,
+                            metrics=["acc"]
+                        )
+
+                    history = model.fit(x_train, df_train.label.values, batch_size=BATCH, epochs=EPOCHS, validation_data=(x_test, df_test.label.values))
+
+                    print(f"Best validation accuracy: {best_val_acc}, best batch size: {best_batch_size}")
+                    print(f"Setup LR: {lr}, TEXT: {TEXT}, LABEL: {LABEL}, WORD2VEC_EXT: {WORD2VEC_EXT}")

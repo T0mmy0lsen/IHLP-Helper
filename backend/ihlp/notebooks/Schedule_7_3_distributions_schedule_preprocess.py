@@ -1,13 +1,13 @@
 import pandas as pd
-import networkx as nx
+
 import matplotlib
 import matplotlib.pyplot as plt
 import datetime
 
 from tqdm import tqdm
 
-from ihlp.notebooks.Schedule_classes import TreeNode
-from ihlp.notebooks.Schedule_analyse_dataset import default_dist
+from Schedule_classes import TreeNode
+from Schedule_analyse_dataset import default_dist
 
 matplotlib.use('Agg')
 
