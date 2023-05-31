@@ -4,12 +4,10 @@ from datetime import timedelta, datetime
 import bs4 as bs4
 import numpy as np
 from django.conf import settings
-from django.db.models import Q
 
 from ihlp.models import Predict
 from ihlp.models_ihlp import Request
-from transformers import TFAutoModelForSequenceClassification, AutoTokenizer, TFXLMRobertaForSequenceClassification, \
-    TFAutoModel, AutoConfig, TFXLMRobertaPreTrainedModel
+from transformers import TFAutoModelForSequenceClassification, AutoTokenizer
 
 import pandas as pd
 import tensorflow as tf
@@ -93,7 +91,7 @@ def calculatePrediction(
     df_tmp_placement = df_tmp_placement.sort_values(by='label_encoded')
     placement_index = df_tmp_placement.label_placement.values
 
-    model_path = 'C:/Git/ihlp-helper/backend/ihlp/notebooks/data/models/IHLP-XLM-RoBERTa-Time-Consumption'
+    model_path = f'{settings.BASE_DIR}/ihlp/notebooks/data/models/IHLP-XLM-RoBERTa-Time-Consumption'
     model = TFAutoModelForSequenceClassification.from_pretrained(model_path)
 
     predict_time_consumption = model.predict(tokenized_text, batch_size=1, verbose=False)

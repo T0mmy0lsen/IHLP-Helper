@@ -4,4 +4,4 @@ from ihlp.management.load import Load
 
 class Command(BaseCommand):
     def handle(self, **options):
-        Load().boot()
+        Load().load()

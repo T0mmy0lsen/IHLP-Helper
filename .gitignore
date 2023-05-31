@@ -28,3 +28,5 @@
 
 /backend/*.sqlite3
 
+/backend/ihlp/management/commands/load/
+
